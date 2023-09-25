@@ -7,12 +7,13 @@ public class ShallowWater2DSimulation : MonoBehaviour
 
 
     // Simulation parameters
-    static int nx = 30+1; // Number of grid cells in the x-direction
-    static int ny = 30+1; // Number of grid cells in the y-direction
-    float dt = 0.001f; // Time step
+    static int nx = 30 + 1; // Number of grid cells in the x-direction
+    static int ny = 30 + 1; // Number of grid cells in the y-direction
+    float dt = 0.005f; // Time step
     float dx = 1f; // Spatial step in the x-direction
     float dy = 1f; // Spatial step in the y-direction
     float g = 9.81f; // Gravity
+    float k = 1.0f; // Voscous drag
     float[,] h;
     float[,] u;
     float[,] v;
@@ -28,33 +29,19 @@ public class ShallowWater2DSimulation : MonoBehaviour
         h = new float[nx, ny]; // Water height
         u = new float[nx, ny]; // x-velocity component
         v = new float[nx, ny]; // y-velocity component
-        new_h = new float[nx, ny];
-        new_u = new float[nx, ny];
-        new_v = new float[nx, ny];
-        // Initialize initial conditions (e.g., a water wave in the center)
+
+        // Initialize initial conditions
         for (int i = 0; i < nx; i++)
         {
             for (int j = 0; j < ny; j++)
             {
-                /*float x = (i - nx / 2) * dx;
-                float y = (j - ny / 2) * dy;
-                float r = Mathf.Sqrt(x * x + y * y);
-                if (r < 1.0f)
+                if (i == 5 & j == 5)
                 {
-                    h[i, j] = 1.0f;
+                    h[i, j] = 100.0f;
                 }
                 else
                 {
-                    h[i, j] = 0.5f;
-                }*/
-
-                if (i == 15 & j == 15)
-                {
-                    h[i, j] = 15.0f;
-                }
-                else
-                {
-                    h[i, j] = 1.0f;
+                    h[i, j] = 0.0f;
                 }
 
                 u[i, j] = 0.0f;
@@ -66,84 +53,22 @@ public class ShallowWater2DSimulation : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        float[,] dhdx = GradientX(h, dx);
-        float[,] dhdy = GradientY(h, dy);
-        float[,] dudx = GradientX(u, dx);
-        float[,] dvdy = GradientY(v, dy);
         // Time integration loop (Euler method for simplicity)
-        //for (int t = 0; t < 100; t++)
-        //{
-
-        for (int i = 1; i < nx - 1; i++)
+        for (int i = 0; i < nx; i++)
         {
-            for (int j = 1; j < ny - 1; j++)
+            for (int j = 0; j < ny; j++)
             {
-                if (i == nx - 1)
-                {
-                    // Reflect the wave at the right boundary for h
-                    new_h[i, j] = h[i - 1, j];
-                    // Reflect velocities for u and v (you can also apply a zero velocity condition)
-                    new_u[i, j] = -u[i - 1, j];
-                    new_v[i, j] = v[i - 1, j];
-                }
-
-                else if (j == ny - 1)
-                {
-                    // Reflect the wave at the right boundary for h
-                    new_h[i, j] = h[i, j - 1];
-                    // Reflect velocities for u and v (you can also apply a zero velocity condition)
-                    new_u[i, j] = u[i, j - 1];
-                    new_v[i, j] = -v[i, j - 1];
-                }
-                else if (i == 1)
-                {
-                    // Reflect the wave at the right boundary for h
-                    new_h[i, j] = h[1, j];
-                    // Reflect velocities for u and v (you can also apply a zero velocity condition)
-                    new_u[i, j] = -u[1, j];
-                    new_v[i, j] = v[1, j];
-                }
-                else if (j == 1)
-                {
-                    // Reflect the wave at the right boundary for h
-                    new_h[i, j] = h[i, 1];
-                    // Reflect velocities for u and v (you can also apply a zero velocity condition)
-                    new_u[i, j] = u[i, 1];
-                    new_v[i, j] = -v[i, 1];
-                }
-
-                else
-                {
-
-                    /* // Calculate new values of h, u, and v
-                     new_h[i, j] = h[i, j] - (dt / dx) * (u[i + 1, j] - u[i, j]) - (dt / dy) * (v[i, j + 1] - v[i, j]) - (dt / dx) * (u[i-1, j] - u[i, j]) - (dt / dy) * (v[i, j - 1] - v[i, j]);
-                     new_u[i, j] = u[i, j] - (dt / dx) * g * (h[i + 1, j] + h[i - 1, j]);//u[i, j] - (dt / dx) * ((u[i, j] * (u[i + 1, j] - u[i - 1, j]) + 0.5f * (h[i + 1, j] - h[i - 1, j])) / h[i, j]) - (dt / dy) * ((u[i, j] * (v[i, j + 1] - v[i, j - 1]) + 0.5f * (h[i, j + 1] - h[i, j - 1])) / h[i, j]) + g * dt * (h[i, j] - h[i - 1, j]) / dx;
-                     new_v[i, j] = v[i, j] - (dt / dy) * g * (h[i, j + 1] + h[i, j - 1]);//* ((u[i + 1, j] * (v[i, j] - v[i - 1, j]) + 0.5f * (h[i + 1, j] - h[i - 1, j])) / h[i, j]) - (dt / dy) * ((v[i, j] * (v[i, j + 1] - v[i, j - 1]) + 0.5f * (h[i, j + 1] - h[i, j - 1])) / h[i, j]) + g * dt * (h[i, j] - h[i, j - 1]) / dy;
-                 */
-                    h[i, j] -= dt * 0.5f * (dudx[i, j] + dvdy[i, j]);
-                    u[i, j] -= dt * (g * dhdx[i, j]);
-                    v[i, j] -= dt * (g * dhdy[i, j]);
-                }
-
+                var info = ReflectionBoundary(i, j);
+                h[i, j] = info.Item1;
+                u[i, j] = info.Item2;
+                v[i, j] = info.Item3;
             }
         }
 
-            // Update arrays
-            /*for (int i = 1; i < nx - 1; i++)
-            {
-                for (int j = 1; j < ny - 1; j++)
-                {
-                    h[i, j] = new_h[i, j];
-                    u[i, j] = new_u[i, j];
-                    v[i, j] = new_v[i, j];
-                
-                }
-            }*/
         // Output or visualization code can be added here
-        //}
         Mesh mesh = GetComponent<MeshFilter>().mesh;
         Vector3[] vertices = mesh.vertices;
-        for (var i = 1; i < vertices.Length-1; i++)
+        for (var i = 0; i < vertices.Length; i++)
         {
             int a = i / nx;
             int b = i % nx;
@@ -151,6 +76,78 @@ public class ShallowWater2DSimulation : MonoBehaviour
         }
 
         mesh.vertices = vertices;
+        mesh.RecalculateNormals();
+    }
+
+
+    (float, float, float) ReflectionBoundary(int i, int j)
+    {
+
+        float[,] dhdx = GradientX(h, dx);
+        float[,] dhdy = GradientY(h, dy);
+        float[,] dudx = GradientX(u, dx);
+        float[,] dvdy = GradientY(v, dy);
+
+        if (i == 0 && j == 0)
+        {
+            h[i, j] = h[i + 1, j + 1];
+            u[i, j] = -u[i + 1, j + 1];
+            v[i, j] = -v[i + 1, j + 1];
+        }
+        else if (i == nx && j == 0)
+        {
+            h[i, j] = h[i - 1, j + 1];
+            u[i, j] = -u[i - 1, j + 1];
+            v[i, j] = -v[i - 1, j + 1];
+        }
+        else if (i == 0 && j == ny)
+        {
+            h[i, j] = h[i + 1, j - 1];
+            u[i, j] = -u[i + 1, j - 1];
+            v[i, j] = -v[i + 1, j - 1];
+        }
+        else if (i == nx && j == ny)
+        {
+            h[i, j] = h[i - 1, j - 1];
+            u[i, j] = -u[i - 1, j - 1];
+            v[i, j] = -v[i - 1, j - 1];
+        }
+        else if (i == nx)
+        {
+            h[i, j] = h[i - 1, j];
+            u[i, j] = -u[i - 1, j];
+            v[i, j] = v[i - 1, j];
+        }
+        else if (j == ny)
+        {
+            h[i, j] = h[i, j - 1];
+            u[i, j] = u[i, j - 1];
+            v[i, j] = -v[i, j - 1];
+        }
+        else if (i == 0)
+        {
+            h[i, j] = h[i + 1, j];
+            u[i, j] = -u[i + 1, j];
+            v[i, j] = v[i + 1, j];
+        }
+        else if (j == 0)
+        {
+            h[i, j] = h[i, j + 1];
+            u[i, j] = u[i, j + 1];
+            v[i, j] = -v[i, j + 1];
+        }
+        else
+        {
+
+            // Calculate values of h, u, and v                   
+            h[i, j] -= dt * (dudx[i, j] + dvdy[i, j]);
+            u[i, j] = (-dt - (g * dhdx[i, j]))/ k;
+            v[i, j] = (-dt - (g * dhdy[i, j]))/ k;
+        }
+
+        var returning = (h[i, j], u[i, j], v[i, j]);
+
+        return returning;
     }
 
     // Function to calculate the x-gradient of a 2D array
@@ -164,9 +161,10 @@ public class ShallowWater2DSimulation : MonoBehaviour
         {
             for (int j = 1; j < Ny - 1; j++)
             {
-                int iNext = (i + 1) % Nx;
-                int iPrev = (i - 1) % Nx;
-                result[i, j] = ((array[iNext, j] - array[i, j]) - (array[iPrev, j] - array[i, j])) / dx;
+                int iNext = (i + 1);
+                int iPrev = (i - 1);
+                result[i, j] = (array[iNext, j] - array[iPrev, j]) / (2 * dx);
+                //result[i, j] = ((array[iNext, j] - array[i, j]) - (array[iPrev, j] - array[i, j])) / dx;
             }
         }
 
@@ -182,16 +180,18 @@ public class ShallowWater2DSimulation : MonoBehaviour
 
         for (int i = 1; i < Nx - 1; i++)
         {
-            for (int j = 1; j < Ny-1; j++)
+            for (int j = 1; j < Ny - 1; j++)
             {
-                int jNext = (j + 1) % Ny;
-                int jPrev = (j - 1) % Ny;
-                result[i, j] = ((array[i, jNext] - array[i, j]) - (array[i, jPrev] - array[i, j])) / dy;
+                int jNext = (j + 1);
+                int jPrev = (j - 1);
+                result[i, j] = (array[i, jNext] - array[i, jPrev]) / (2 * dy);
+                //result[i, j] = ((array[i, jNext] - array[i, j]) - (array[i, jPrev] - array[i, j])) / dy;
             }
         }
 
         return result;
     }
+
 }
 
 
