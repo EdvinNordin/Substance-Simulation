@@ -48,7 +48,7 @@ public class NoConShallowWater : MonoBehaviour
                 }*/
                 if(i == 15 && j == 15)
                 {
-                    h[i,j] = 10.0f;
+                    h[i,j] = 1.0f;
                 }
                 else
                 {
@@ -70,19 +70,19 @@ public class NoConShallowWater : MonoBehaviour
         {
             for (int j = 0; j < ny; j++)
             {
-                /*if (i == 0 && j == 0)
+                if (i == 0 && j == 0)
                 {
                     newh[i, j] = h[i + 1, j + 1];
                     newu[i, j] = -u[i + 1, j + 1];
                     newv[i, j] = -v[i + 1, j + 1];
                 }
-                else if (i == nx-1 && j == 0)
+                else if (i == nx - 1 && j == 0)
                 {
                     newh[i, j] = h[i - 1, j + 1];
                     newu[i, j] = -u[i - 1, j + 1];
-                   newv[i, j] = -v[i - 1, j + 1];
+                    newv[i, j] = -v[i - 1, j + 1];
                 }
-                else if (i == 0 && j == ny-1)
+                else if (i == 0 && j == ny - 1)
                 {
                     newh[i, j] = h[i + 1, j - 1];
                     newu[i, j] = -u[i + 1, j - 1];
@@ -117,8 +117,8 @@ public class NoConShallowWater : MonoBehaviour
                     newh[i, j] = h[i, j + 1];
                     newu[i, j] = u[i, j + 1];
                     newv[i, j] = -v[i, j + 1];
-                
-                */
+                }
+                /*
                 if (i == 0 && j == 0)
                 {
                     //Debug.Log("0,0: " + newh[i, j]);
@@ -170,7 +170,7 @@ public class NoConShallowWater : MonoBehaviour
                     newh[i, j] = h[i, j + 1];
                     newu[i, j] = u[i, j + 1];
                     newv[i, j] = -v[i, j + 1];
-                }
+                }*/
                 else
                 {
 
@@ -178,9 +178,10 @@ public class NoConShallowWater : MonoBehaviour
                     u[i, j] = u[i, j] - dt * g * ((h[i + 1, j] - h[i, j]) / dx + (h[i - 1, j] - h[i, j]) / dx);
                     v[i, j] = v[i, j] - dt * g * ((h[i, j + 1] - h[i, j]) / dy + (h[i, j - 1] - h[i, j]) / dy);*/
 
-                    newh[i, j] = h[i, j] - dt * ((h[i + 1, j] - h[i - 1, j]) / (2.0f * dx) + (h[i, j + 1] - h[i, j - 1]) / (2.0f * dy));
-                    newu[i, j] = u[i, j] - dt * g * ((h[i + 1, j] - h[i - 1, j]) / (2.0f * dx));
-                    newv[i, j] = v[i, j] - dt * g * ((h[i, j + 1] - h[i, j - 1]) / (2.0f * dy));
+                    newh[i, j] = h[i, j] - dt * ((h[i + 1, j]* u[i + 1, j] - h[i - 1, j]* u[i - 1, j]) / (2.0f * dx) + (h[i, j + 1] * v[i, j + 1] - h[i, j - 1]* v[i, j - 1]) / (2.0f * dy));
+                    newu[i, j] = u[i, j] - dt * (u[i, j] * (u[i + 1, j] - u[i - 1, j]) / (2.0f * dx) + v[i, j] * (u[i + 1, j] - u[i - 1, j]) / (2.0f * dy) + g * (h[i + 1, j] - h[i - 1, j]) / (2.0f * dx));
+                    newv[i, j] = v[i, j] - dt * (u[i, j] * (v[i, j + 1] - v[i, j - 1]) / (2.0f * dx) + v[i, j] * (v[i, j + 1] - v[i, j - 1]) / (2.0f * dy) + g * (h[i, j + 1] - h[i, j - 1]) / (2.0f * dy));
+                    //newv[i, j] = v[i, j] - dt * g * ((h[i, j + 1] - h[i, j - 1]) / (2.0f * dy));
 
                     if(i==15 && j == 15)
                     {
