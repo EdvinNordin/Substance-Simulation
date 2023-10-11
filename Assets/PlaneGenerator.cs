@@ -27,7 +27,6 @@ public class PlaneGenerator : MonoBehaviour
     {
         meshFilter = GetComponent<MeshFilter>();
         GeneratePlane();
-        gameObject.AddComponent<BoxCollider>();
 
     }
 
@@ -94,5 +93,9 @@ public class PlaneGenerator : MonoBehaviour
 
         // Assigning mesh to mesh filter to display it.
         meshFilter.mesh = mesh;
+
+
+        MeshCollider meshCollider = gameObject.AddComponent<MeshCollider>();
+        meshCollider.sharedMesh = mesh;
     }
 }

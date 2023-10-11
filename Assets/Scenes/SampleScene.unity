@@ -138,8 +138,9 @@ GameObject:
   - component: {fileID: 425477483}
   - component: {fileID: 425477484}
   - component: {fileID: 425477485}
+  - component: {fileID: 425477486}
   m_Layer: 0
-  m_Name: GameObject
+  m_Name: Plane
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -157,8 +158,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 24dcb743686370049914f3c726799290, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  width: 100
-  depth: 100
+  width: 30
+  depth: 30
 --- !u!4 &425477480
 Transform:
   m_ObjectHideFlags: 0
@@ -255,11 +256,29 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 425477478}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5a10816de35915b47a763614ea651d77, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  dt: 0.001
+  k: 0.005
+  d: 3
+--- !u!114 &425477486
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 425477478}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 48193876da1fb4f44800865dd8f17d91, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  dt: 0.01
+  visc: 0.01
+  diffusion: 0.01
 --- !u!1 &705507993
 GameObject:
   m_ObjectHideFlags: 0
