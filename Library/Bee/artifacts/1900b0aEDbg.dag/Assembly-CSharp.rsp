@@ -355,11 +355,10 @@
 "Assets/CONSHALLOWWATER.cs"
 "Assets/ConSWE.cs"
 "Assets/Fluid.cs"
-"Assets/MeshEdit.cs"
 "Assets/NavierStokes.cs"
-"Assets/NewBehaviourScript.cs"
 "Assets/NoConShallowWater.cs"
 "Assets/PlaneGenerator.cs"
+"Assets/Points.cs"
 "Assets/SubstanceController.cs"
 "Assets/WaveEquation.cs"
 -langversion:9.0
