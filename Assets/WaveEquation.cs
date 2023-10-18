@@ -4,7 +4,9 @@ using UnityEngine;
 
 public class WaveEquation : MonoBehaviour
 {
+    public ComputeShader computeShader;
 
+    public RenderTexture renderTexture;
 
     // Simulation parameters
     static int nx = 30 + 1; // Number of grid cells in the x-direction

@@ -361,6 +361,7 @@
 "Assets/Points.cs"
 "Assets/SubstanceController.cs"
 "Assets/WaveEquation.cs"
+"Assets/WEGPU.cs"
 -langversion:9.0
 
 /deterministic

@@ -27,7 +27,8 @@ public class PlaneGenerator : MonoBehaviour
     {
         meshFilter = GetComponent<MeshFilter>();
         GeneratePlane();
-
+        width--;
+        depth--;
     }
 
     /// <summary>

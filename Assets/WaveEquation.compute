@@ -1,0 +1,37 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+#pragma enable_d3d11_debug_symbols
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+
+
+RWStructuredBuffer<float> heightBuffer;
+RWStructuredBuffer<float> velBuffer;
+RWStructuredBuffer<float> accBuffer;
+
+
+[numthreads(10,10,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    float dt = 0.01f;
+    float width = 20.0f;
+    
+    if (id.x > 0 && id.x < width - 1 && id.y > 0 && id.y < width - 1)
+    {
+        accBuffer[id.x + id.y * width] = heightBuffer[(id.x - 1) + id.y * width] + heightBuffer[(id.x + 1) + id.y * width] + heightBuffer[id.x + (id.y + 1) * width] + heightBuffer[id.x + (id.y - 1) * width] - 4.0f * heightBuffer[id.x + id.y * width];
+        velBuffer[id.x + id.y * width] = velBuffer[id.x + id.y * width] + dt * accBuffer[id.x + id.y * width];
+        heightBuffer[id.x + id.y * width] = heightBuffer[id.x + id.y * width] + dt * velBuffer[id.x + id.y * width];
+        
+    }
+    else
+    {
+        heightBuffer[id.x + id.y * width] = 0.0f;
+
+    }
+
+}
+
+    // TODO: insert actual code here!
+    /*a[id.xy] = (h[id.x - 1, id.y] + h[id.x + 1, id.y] + h[id.x, id.y - 1] + h[id.x, id.y + 1] - (4.0f * h[id.xy]));
+    v[id.xy] = v[id.xy] + 0.001f * a[id.xy];
+    h[id.xy] = h[id.xy] + 0.001f * v[id.xy];*/
