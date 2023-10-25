@@ -139,6 +139,7 @@ GameObject:
   - component: {fileID: 425477484}
   - component: {fileID: 425477485}
   - component: {fileID: 425477486}
+  - component: {fileID: 425477488}
   - component: {fileID: 425477487}
   m_Layer: 0
   m_Name: Plane
@@ -159,8 +160,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 24dcb743686370049914f3c726799290, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  width: 20
-  depth: 20
+  width: 29
+  depth: 29
 --- !u!4 &425477480
 Transform:
   m_ObjectHideFlags: 0
@@ -290,12 +291,24 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 425477478}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6e5fcc8f1a2505d4fa8ec5d36759a339, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   computeShader: {fileID: 7200000, guid: f7dd06bf209cd384fa4cea4968c66872, type: 3}
+--- !u!114 &425477488
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 425477478}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7ccc2122baf588042b0281f6b8a1229c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &705507993
 GameObject:
   m_ObjectHideFlags: 0
