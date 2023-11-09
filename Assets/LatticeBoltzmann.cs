@@ -41,13 +41,19 @@ public class LatticeBoltzmann : MonoBehaviour
             {
                 if(x == 8 && y == 13 )
                 {
-                    rho[x, y] = 10.0f;
+                    for (int q = 0; q < 9; q++)
+                    {
+                        f[x, y, q] = 3.0f;
+                    }
                 }
                 else
                 {
-                rho[x, y] = 1.0f;
-                ux[x, y] = 0.0f;
-                uy[x, y] = 0.0f;
+                    for (int q = 0; q < 9; q++)
+                    {
+                        f[x, y, q] = 0.0f;
+                    }
+                    ux[x, y] = 0.0f;
+                    uy[x, y] = 0.0f;
 
                 }
 
@@ -178,6 +184,7 @@ public class LatticeBoltzmann : MonoBehaviour
         prevX = xPos;
         prevY = yPos;
     }
+
     public static int GetClosestVertex(RaycastHit aHit, int[] aTriangles)
     {
         var b = aHit.barycentricCoordinate;
