@@ -139,7 +139,7 @@ public class LatticeBoltzmann : MonoBehaviour
                     int vertexHit = GetClosestVertex(hit, triangles);
                     int a = vertexHit / nx;
                     int b = vertexHit % nx;
-                    f[a, b,0] += 1.0f;
+                    rho[a, b] += 1.0f;
                 }
             }
         }
