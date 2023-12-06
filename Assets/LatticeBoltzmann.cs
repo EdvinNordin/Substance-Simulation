@@ -39,28 +39,16 @@ public class LatticeBoltzmann : MonoBehaviour
         {
             for (int y = 0; y < ny; y++)
             {
-                if(x == 8 && y == 13 )
-                {
-                    for (int q = 0; q < 9; q++)
-                    {
-                        f[x, y, q] = 3.0f;
-                    }
-                }
-                else
-                {
-                    for (int q = 0; q < 9; q++)
-                    {
-                        f[x, y, q] = 0.0f;
-                    }
-                    ux[x, y] = 0.0f;
-                    uy[x, y] = 0.0f;
-
-                }
+            
+                rho[x, y] = 1.0f;
+                ux[x, y] = 0.0f;
+                uy[x, y] = 0.0f;
 
                 for (int k = 0; k < ndir; k++)
                 {
                     f[x, y, k] = w[k] * rho[x, y];
                 }
+               
             }
         }
     }

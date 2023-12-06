@@ -13,12 +13,15 @@ public class PlaneGenerator : MonoBehaviour
     // Width of our quad.
     [SerializeField]
     [Range(1, 100)]
-    private int width = 2;
+    private int widthInput = 2;
 
     // Depth of our plane.
     [SerializeField]
     [Range(1, 100)]
-    private int depth = 2;
+    private int depthInput = 2;
+
+    int width;
+    int depth;
 
     /// <summary>
     /// Unity method called on first frame.
@@ -26,9 +29,9 @@ public class PlaneGenerator : MonoBehaviour
     void Start()
     {
         meshFilter = GetComponent<MeshFilter>();
+        width = widthInput-1;
+        depth = depthInput-1;
         GeneratePlane();
-        width--;
-        depth--;
     }
 
     /// <summary>
@@ -60,7 +63,7 @@ public class PlaneGenerator : MonoBehaviour
             for (int w = 0; w < width; w++)
             {
                 // quad triangles index.
-                int ti = (d * (width) + w) * 6; // 6 - polygons per quad * corners per polygon
+                int ti = (d * width + w) * 6; // 6 - polygons per quad * corners per polygon
 
                 // First tringle
                 triangles[ti] = (d * (width + 1)) + w;
