@@ -50,6 +50,7 @@
      <Compile Include="Assets\WaveEquation.cs" />
      <Compile Include="Assets\PlaneGenerator.cs" />
      <Compile Include="Assets\SubstanceController.cs" />
+     <None Include="Assets\NS_GPU.compute" />
      <None Include="Assets\WaveEquation.compute" />
     <Reference Include="UnityEngine">
         <HintPath>A:\Programs\2022.3.9f1\Editor\Data\Managed\UnityEngine\UnityEngine.dll</HintPath>

@@ -29,7 +29,7 @@ public class LBM : MonoBehaviour
     private int[] latticeDirY = { 0, 0, 1, 0, -1, 1, 1, -1, -1 };
     private float[] latticeWeight = { 4.0f / 9, 1.0f / 9, 1.0f / 9, 1.0f / 9, 1.0f / 9, 1.0f / 36, 1.0f / 36, 1.0f / 36, 1.0f / 36 };
 
-    private const float tau = 1.9f; //Relaxation time 0.5 to 2
+    private const float tau = 0.9f; //Relaxation time 0.5 to 2
 
     List<GameObject> pointObjects;
 
@@ -51,7 +51,9 @@ public class LBM : MonoBehaviour
         {
             for (int j = 0; j < ny; j++)
             {
-                pointObjects.Add(Instantiate(prefab, new Vector3(i- nx / 2, 0, j- ny / 2), Quaternion.identity));
+                GameObject newPoint = Instantiate(prefab, new Vector3(i - nx / 2, 0, j - ny / 2), Quaternion.identity);
+                pointObjects.Add(newPoint);
+                newPoint.name = "Point:" + i + "," + j;
             }
         }
 
@@ -69,16 +71,11 @@ public class LBM : MonoBehaviour
                 inputVelX[i, j] = 0.0f;
                 inputVelY[i, j] = 0.0f;
 
-                if(i == nx/2 && j == ny/2){
+                /*if(i == nx/2 && j == ny/2){
                     inputRho[i, j] = 2.0f;
-                }
+                }*/
 
-                for (int k = 0; k < q; k++)
-                {
-                    f[i, j, k] = latticeWeight[k] * rho[i, j];
-                    feq[i, j, k] = 0.0f;
-                    fnew[i, j, k] = 0.0f;
-                }
+                
 
             }
         }
@@ -123,7 +120,7 @@ public class LBM : MonoBehaviour
                     float vu = latticeDirX[k] * velX[i, j] + latticeDirY[k] * velY[i, j];
                     float uu = velX[i, j] * velX[i, j] + velY[i, j] * velY[i, j];
                     feq[i, j, k] = latticeWeight[k] * rho[i, j] * (1 + 3 * vu + 9 / 2 * vu * vu + 3 / 2 * uu);
-                    fnew[i, j, k] = f[i, j, k] - (f[i, j, k] - feq[i, j, k]) / tau;
+                    fnew[i, j, k] = f[i, j, k] -(f[i, j, k] - feq[i, j, k]) / tau;
                 }
 
             }
@@ -136,34 +133,38 @@ public class LBM : MonoBehaviour
             {
                 for (int k = 0; k < q; k++)
                 {
-                    if(i == 0 && j == 0){
-                        f[i,j,k] = fnew[i+1,j+1,k];
-                    }
-                    else if(i == nx-1 && j == 0){
-                        f[i,j,k] = fnew[i-1,j+1,k];
-                    }
-                    else if(i == 0 && j == ny-1){
-                        f[i,j,k] = fnew[i+1,j-1,k];
-                    }
-                    else if(i == nx-1 && j == ny-1){
-                        f[i,j,k] = fnew[i-1,j-1,k];
-                    }
-                    else if(i == 0 ){
-                        f[i,j,k] = fnew[i+1,j,k];
-                    }
-                    else if(j == 0 ){
-                        f[i,j,k] = fnew[i,j+1,k];
-                    }
-                    else if(i == nx-1 ){
-                        f[i,j,k] = fnew[i-1,j,k];
-                    }
-                    else if(j == ny-1 ){
-                        f[i,j,k] = fnew[i,j-1,k];
-                    }else{
+                    /*
+                    if(i + latticeDirX[k] >= 0 && i + latticeDirX[k] < nx && j + latticeDirY[k] >= 0 && j + latticeDirY[k] < ny){
+
                             
                         int nextX = (int)(i + latticeDirX[k]);
                         int nextY = (int)(j + latticeDirY[k]);
                         f[nextX, nextY, k] = fnew[i, j, k];
+                    }*/
+                    int nextX = (int)(i + latticeDirX[k]);
+                    int nextY = (int)(j + latticeDirY[k]);
+
+                    // Check if the next cell is inside the domain
+                    if(nextX >= 0 && nextX < nx && nextY >= 0 && nextY < ny)
+                    {
+                        f[nextX, nextY, k] = fnew[i, j, k];
+                    }
+                    // If the next cell is outside the domain, apply the outflow boundary condition
+                    else
+                    {
+                        // If the next cell is at a corner, average the distribution functions from the two adjacent cells
+                        if((nextX < 0 || nextX >= nx) && (nextY < 0 || nextY >= ny))
+                        {
+                            int adjX1 = Mathf.Max(0, Mathf.Min(nx - 1, nextX));
+                            int adjY1 = j;
+                            int adjX2 = i;
+                            int adjY2 = Mathf.Max(0, Mathf.Min(ny - 1, nextY));
+                            f[i, j, k] = 0.5f * (fnew[adjX1, adjY1, k] + fnew[adjX2, adjY2, k]);
+                        }
+                        else
+                        {
+                            f[i, j, k] = fnew[i, j, k];
+                        }
                     }
                 }
             }
@@ -172,7 +173,7 @@ public class LBM : MonoBehaviour
         /*Mesh mesh = GetComponent<MeshFilter>().mesh;
         Vector3[] vertices = mesh.vertices;
         int[] triangles = mesh.triangles;
-
+*/
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
         RaycastHit hit;
 
@@ -190,9 +191,12 @@ public class LBM : MonoBehaviour
                 else
                 {
 
-                    int vertexHit = GetClosestVertex(hit, triangles);
-                    int a = vertexHit / nx;
-                    int b = vertexHit % nx;
+                    string name = hit.transform.gameObject.name;
+                    int pointHit = int.Parse(name.Substring(name.Length - 3, name.Length - 2));
+                    //int vertexHit = GetClosestVertex(hit, triangles);
+                    //pointObjects[0].transform.position = hit.point;
+                    int a = pointHit / nx;
+                    int b = pointHit % nx;
                     inputRho[a, b] += 1.0f;
                 }
             }
@@ -215,14 +219,14 @@ public class LBM : MonoBehaviour
                 else
                 {
 
-                    int vertexHit = GetClosestVertex(hit, triangles);
+                    /*int vertexHit = GetClosestVertex(hit, triangles);
                     int a = vertexHit / nx;
                     int b = vertexHit % nx;
                     inputVelX[a, b] += 0.10f * (xPos - prevX);
-                    inputVelY[a, b] += 0.10f * (yPos - prevY);
+                    inputVelY[a, b] += 0.10f * (yPos - prevY);*/
                 }
             }
-        }*/
+        }
 
 
         for (var i = 0; i<nx*ny; i++)//vertices.Length; i++)

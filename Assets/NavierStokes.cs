@@ -278,6 +278,7 @@ public class NavierStokes : MonoBehaviour
                 if (x > nxFloat + 0.5) x = nxFloat + 0.5f;
                 i0 = Mathf.Floor(x);
                 i1 = i0 + 1.0f;
+                
                 if (y < 0.5) y = 0.5f;
                 if (y > nyFloat + 0.5) y = nyFloat + 0.5f;
                 j0 = Mathf.Floor(y);
