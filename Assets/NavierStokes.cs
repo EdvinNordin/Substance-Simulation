@@ -174,28 +174,6 @@ public class NavierStokes : MonoBehaviour
         mesh.RecalculateNormals();
     }
 
-    void step() {
-
-        //mixing and spreading out. 1: left and right edge, 2: top and bottom edge
-        diffuse(1, Vx, Vx0, visc);
-        diffuse(2, Vy, Vy0, visc);
-
-        //sets the boxes to equilibrium, has to be incompressible
-        project(Vx0, Vy0, Vx, Vy);
-
-        //moves dye from velocity. 1: left and right edge, 2: top and bottom edge
-        advect(1, Vx, Vx0, Vx0, Vy0);
-        advect(2, Vy, Vy0, Vx0, Vy0);
-
-        //sets the boxes to equilibrium, has to be incompressible
-        project(Vx, Vy, Vx0, Vy0);
-
-        //mixing and spreading out. 0: not att edge
-        diffuse(0, density, source, diffusion);
-
-        //moves dye from velocity. 0: not att edge
-        advect(0, density, source, Vx, Vy);
-    }
 
     public void addDensity(int x, int y, float amount)
     {
