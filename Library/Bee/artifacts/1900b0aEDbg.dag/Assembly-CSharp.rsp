@@ -358,6 +358,7 @@
 "Assets/LBM.cs"
 "Assets/NavierStokes.cs"
 "Assets/NoConShallowWater.cs"
+"Assets/NS_GPU.cs"
 "Assets/PlaneGenerator.cs"
 "Assets/SubstanceController.cs"
 "Assets/WaveEquation.cs"

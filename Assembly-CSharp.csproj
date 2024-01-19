@@ -48,6 +48,7 @@
      <Compile Include="Assets\LBM.cs" />
      <Compile Include="Assets\NoConShallowWater.cs" />
      <Compile Include="Assets\WaveEquation.cs" />
+     <Compile Include="Assets\NS_GPU.cs" />
      <Compile Include="Assets\PlaneGenerator.cs" />
      <Compile Include="Assets\SubstanceController.cs" />
      <None Include="Assets\NS_GPU.compute" />
