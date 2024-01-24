@@ -270,7 +270,6 @@ GameObject:
   - component: {fileID: 425477487}
   - component: {fileID: 425477489}
   - component: {fileID: 425477490}
-  - component: {fileID: 425477491}
   m_Layer: 0
   m_Name: Plane
   m_TagString: Untagged
@@ -290,8 +289,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 24dcb743686370049914f3c726799290, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  widthInput: 20
-  depthInput: 20
+  widthInput: 100
+  depthInput: 100
 --- !u!4 &425477480
 Transform:
   m_ObjectHideFlags: 0
@@ -459,33 +458,14 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 425477478}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f890b1128e65065408f23906273c3fd3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  computeShader: {fileID: 7200000, guid: e3b6faf16cbda284e911d064f7914cab, type: 3}
-  velXnext: {fileID: 0}
-  velYnext: {fileID: 0}
-  velXprev: {fileID: 0}
-  velYprev: {fileID: 0}
-  input: {fileID: 0}
-  output: {fileID: 0}
---- !u!114 &425477491
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 425477478}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8356e46dcee49ab418d20e38d998ee30, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  TextureWidth: 20
-  TextureHeight: 20
-  navierStokesShader: {fileID: 7200000, guid: 985d0dfc07168dd459fbf17e7c3bb79a, type: 3}
+  TextureWidth: 100
+  TextureHeight: 100
+  navierStokesShader: {fileID: 7200000, guid: e3b6faf16cbda284e911d064f7914cab, type: 3}
 --- !u!1 &471310729 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 4180642826444304927, guid: aed48f874cbe13f4e8f1bd4edd066cfe, type: 3}
@@ -806,7 +786,7 @@ Transform:
   m_GameObject: {fileID: 963194225}
   serializedVersion: 2
   m_LocalRotation: {x: -0.5057507, y: 0.49405295, z: -0.5070772, w: -0.49295095}
-  m_LocalPosition: {x: -0.39521956, y: 17.815563, z: -0.069394216}
+  m_LocalPosition: {x: -2.4419982, y: 97.05914, z: -0.08966161}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -912,13 +892,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f890b1128e65065408f23906273c3fd3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  computeShader: {fileID: 7200000, guid: e3b6faf16cbda284e911d064f7914cab, type: 3}
-  velXnext: {fileID: 0}
-  velYnext: {fileID: 0}
-  velXprev: {fileID: 0}
-  velYprev: {fileID: 0}
-  input: {fileID: 0}
-  output: {fileID: 0}
+  TextureWidth: 20
+  TextureHeight: 20
+  navierStokesShader: {fileID: 0}
 --- !u!64 &2072007482
 MeshCollider:
   m_ObjectHideFlags: 0

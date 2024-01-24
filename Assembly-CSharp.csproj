@@ -40,23 +40,20 @@
     <Analyzer Include="A:\Programs\2022.3.9f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.Properties.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
-     <Compile Include="Assets\ConSWE.cs" />
-     <Compile Include="Assets\WEGPU.cs" />
-     <Compile Include="Assets\StableFluids2D.cs" />
-     <Compile Include="Assets\LatticeBoltzmann.cs" />
-     <Compile Include="Assets\DebugMode.cs" />
-     <Compile Include="Assets\Testing\Testing.cs" />
-     <Compile Include="Assets\NavierStokes.cs" />
-     <Compile Include="Assets\LBM.cs" />
-     <Compile Include="Assets\NoConShallowWater.cs" />
-     <Compile Include="Assets\WaveEquation.cs" />
-     <Compile Include="Assets\NS_GPU.cs" />
+     <Compile Include="Assets\GPU\WEGPU.cs" />
+     <Compile Include="Assets\CPU\NoConShallowWater.cs" />
+     <Compile Include="Assets\CPU\ConSWE.cs" />
+     <Compile Include="Assets\Testing\WaveEquation.cs" />
+     <Compile Include="Assets\CPU\DebugMode.cs" />
+     <Compile Include="Assets\CPU\LBM.cs" />
+     <Compile Include="Assets\CPU\NavierStokes.cs" />
      <Compile Include="Assets\PlaneGenerator.cs" />
-     <Compile Include="Assets\SubstanceController.cs" />
-     <None Include="Assets\NS_GPU.compute" />
-     <None Include="Assets\WaveEquation.compute" />
-     <None Include="Assets\Testing\Testing.compute" />
-     <None Include="Assets\StableFluids2D.compute" />
+     <Compile Include="Assets\GPU\NS_GPU.cs" />
+     <Compile Include="Assets\CPU\LatticeBoltzmann.cs" />
+     <Compile Include="Assets\Testing\StableFluids2D.cs" />
+     <None Include="Assets\GPU\NS_GPU.compute" />
+     <None Include="Assets\GPU\WaveEquation.compute" />
+     <None Include="Assets\Testing\StableFluids2D.compute" />
     <Reference Include="UnityEngine">
         <HintPath>A:\Programs\2022.3.9f1\Editor\Data\Managed\UnityEngine\UnityEngine.dll</HintPath>
     </Reference>
