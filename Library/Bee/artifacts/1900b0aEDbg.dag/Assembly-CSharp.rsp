@@ -360,7 +360,9 @@
 "Assets/NoConShallowWater.cs"
 "Assets/NS_GPU.cs"
 "Assets/PlaneGenerator.cs"
+"Assets/StableFluids2D.cs"
 "Assets/SubstanceController.cs"
+"Assets/Testing/Testing.cs"
 "Assets/WaveEquation.cs"
 "Assets/WEGPU.cs"
 -langversion:9.0

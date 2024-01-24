@@ -14,8 +14,8 @@ public class NS_GPU : MonoBehaviour
     public RenderTexture input;
     public RenderTexture output;
 
-     Texture2D tempTex;
-     Texture2D tempTex2;
+     Texture2D zeroTex;
+     Texture2D startingTex;
 
     private int kernelHandle;
 
@@ -23,38 +23,36 @@ public class NS_GPU : MonoBehaviour
     static int nx = 20; // Number of grid cells in the x-direction
     static int ny = 20; // Number of grid cells in the y-direction
     
-    float[] inputArray;
-    float[] inputArray2;
+    float[] zeroArray;
+    float[] startingArray;
 
     // Start is called before the first frame update
     void Start()
     {
-        inputArray = new float[nx*ny];
-        inputArray2 = new float[nx*ny];
+        zeroArray = new float[nx*ny];
+        startingArray = new float[nx*ny];
 
         kernelHandle = computeShader.FindKernel("navierStokes");
 
-        tempTex = new Texture2D(nx, ny, TextureFormat.RFloat, false);
-        tempTex2 = new Texture2D(nx, ny, TextureFormat.RFloat, false);
-
-
         for (int i = 0; i < nx*ny; i++)
         {
-            inputArray[i] = 0.0f;
-            inputArray2[i] = 0.0f;
+            zeroArray[i] = 0.001f;
+            startingArray[i] = 0.001f;
 
-            if(i > 230 && i < 235)
+            if(i > 225 && i < 235)
             {
-                inputArray[i] = 0.9f;
+                startingArray[i] = 0.9f;
             }      
         }
 
+        zeroTex = new Texture2D(nx, ny, TextureFormat.RFloat, false);
+        startingTex = new Texture2D(nx, ny, TextureFormat.RFloat, false);
         
-        tempTex.SetPixelData(inputArray, 0, 0);
-        tempTex2.SetPixelData(inputArray2, 0, 0);
+        zeroTex.SetPixelData(zeroArray, 0, 0);
+        startingTex.SetPixelData(startingArray, 0, 0);
         
-        tempTex.Apply();
-        tempTex2.Apply();
+        zeroTex.Apply();
+        startingTex.Apply();
 
 
         velXnext = new RenderTexture(nx, ny, 0, RenderTextureFormat.RFloat);
@@ -71,19 +69,19 @@ public class NS_GPU : MonoBehaviour
         input.enableRandomWrite = true;
         output.enableRandomWrite = true;
 
-        velXnext.Create();
+        /*velXnext.Create();
         velYnext.Create();
         velXprev.Create();
         velYprev.Create();
         input.Create();
-        output.Create();
+        output.Create();*/
 
-        Graphics.Blit(tempTex, velXnext);
-        Graphics.Blit(tempTex, velYnext);
-        Graphics.Blit(tempTex, velXprev);
-        Graphics.Blit(tempTex, velYprev);
-        Graphics.Blit(tempTex2, input);
-        Graphics.Blit(tempTex, output);
+        Graphics.Blit(zeroTex, velXnext);
+        Graphics.Blit(zeroTex, velYnext);
+        Graphics.Blit(zeroTex, velXprev);
+        Graphics.Blit(zeroTex, velYprev);
+        Graphics.Blit(zeroTex, input);
+        Graphics.Blit(startingTex, output);
 
         computeShader.SetTexture(kernelHandle, "velXnext", velXnext);
         computeShader.SetTexture(kernelHandle, "velYnext", velYnext);
@@ -92,26 +90,28 @@ public class NS_GPU : MonoBehaviour
         computeShader.SetTexture(kernelHandle, "InputTex", input);
         computeShader.SetTexture(kernelHandle, "OutputTex", output);
 
-        computeShader.SetInt("maxWidth", nx);
-        computeShader.SetInt("maxHeight", ny);
-
+        /*computeShader.SetInt("maxWidth", nx-1);
+        computeShader.SetInt("maxHeight", ny-1);
+*/
         
-        //computeShader.Dispatch(kernelHandle, nx/10, ny/10, 1);
+        MeshRenderer meshRenderer = GetComponent<MeshRenderer>();
+        meshRenderer.material.mainTexture = velXnext;
+        //computeShader.Dispatch(kernelHandle, 20, 20, 1);
         //Camera.main.targetTexture = output;
     }
 
     // Update is called once per frame
     void Update()
     {
+        
+        //Debug.Break();
         computeShader.Dispatch(kernelHandle, 20, 20, 1);
         //Graphics.Blit(output, rendTex);
         //outputArray.GetData(output);
         //velBuffer.GetData(v);
         //accBuffer.GetData(a);
 
-        MeshRenderer meshRenderer = GetComponent<MeshRenderer>();
         
-        meshRenderer.material.mainTexture = output;
 
         //Debug.Log(sizeof(float));
 

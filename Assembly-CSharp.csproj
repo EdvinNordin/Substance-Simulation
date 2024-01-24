@@ -42,8 +42,10 @@
   <ItemGroup>
      <Compile Include="Assets\ConSWE.cs" />
      <Compile Include="Assets\WEGPU.cs" />
+     <Compile Include="Assets\StableFluids2D.cs" />
      <Compile Include="Assets\LatticeBoltzmann.cs" />
      <Compile Include="Assets\DebugMode.cs" />
+     <Compile Include="Assets\Testing\Testing.cs" />
      <Compile Include="Assets\NavierStokes.cs" />
      <Compile Include="Assets\LBM.cs" />
      <Compile Include="Assets\NoConShallowWater.cs" />
@@ -53,6 +55,8 @@
      <Compile Include="Assets\SubstanceController.cs" />
      <None Include="Assets\NS_GPU.compute" />
      <None Include="Assets\WaveEquation.compute" />
+     <None Include="Assets\Testing\Testing.compute" />
+     <None Include="Assets\StableFluids2D.compute" />
     <Reference Include="UnityEngine">
         <HintPath>A:\Programs\2022.3.9f1\Editor\Data\Managed\UnityEngine\UnityEngine.dll</HintPath>
     </Reference>

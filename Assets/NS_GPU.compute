@@ -7,9 +7,9 @@
 
 float dt = 0.01f;
 
-float visc = 0.1f;
+float visc = 0.01f;
 
-float diffusion = 0.1f;
+float diffusion = 0.01f;
 
 RWTexture2D<float> velXprev;
 RWTexture2D<float> velYprev;
@@ -20,53 +20,75 @@ RWTexture2D<float> velYnext;
 RWTexture2D<float> InputTex;
 RWTexture2D<float> OutputTex;
 
-
-
-
 uint maxWidth;
 uint maxHeight;
 
-groupshared float GSfloat[20*20*1];
-
 void setBnd(int bound, RWTexture2D<float> boundTex, uint2 id)
     {
+
         RWTexture2D<float> temp = boundTex;
 
-        if(bound == 2){
-            temp[uint2(id.x, 0)] = -boundTex[uint2(id.x, 1)];
-            temp[uint2(id.x, maxHeight)] = -boundTex[uint2(id.x, maxHeight-1)];
+        /*if(bound == 2){
+            if(id.y == 0){
+                temp[uint2(id.x, 0)] = -boundTex[uint2(id.x, 1)];
+            }
+            else if(id.y == maxHeight){
+                temp[uint2(id.x, maxHeight-1)] = -boundTex[uint2(id.x, maxHeight-2)];
+            }
         }else{
-            temp[uint2(id.x, 0)] = boundTex[uint2(id.x, 1)];
-            temp[uint2(id.x, maxHeight)] = boundTex[uint2(id.x, maxHeight-1)];
+            if(id.y == 0){
+                temp[uint2(id.x, 0)] = boundTex[uint2(id.x, 1)];
+            }
+            else if(id.y == maxHeight-1){
+                temp[uint2(id.x, maxHeight-1)] = boundTex[uint2(id.x, maxHeight-2)];
+            }
         }
 
         if(bound == 1){
-            temp[uint2(0, id.y)] = -boundTex[uint2(1, id.y)];
-            temp[uint2(maxWidth, id.y)] = -boundTex[uint2(maxWidth-1, id.y)];
+            if(id.x == 0){
+                temp[uint2(0, id.y)] = -boundTex[uint2(1, id.y)];
+            }
+            else if(id.x == maxWidth-1){
+                temp[uint2(maxWidth-1, id.y)] = -boundTex[uint2(maxWidth-2, id.y)];
+            }
         }else{
-            temp[uint2(0, id.y)] = boundTex[uint2(1, id.y)];
-            temp[uint2(maxWidth, id.y)] = boundTex[uint2(maxWidth-1, id.y)];
+            if(id.x == 0){
+                temp[uint2(0, id.y)] = boundTex[uint2(1, id.y)];
+            }
+            else if(id.x == maxWidth-1){
+                temp[uint2(maxWidth-1, id.y)] = boundTex[uint2(maxWidth-2, id.y)];
+            }
         }
 
         if (id.x == 0 && id.y == 0){
             temp[uint2(0, 0)] = 0.5f * (boundTex[uint2(1, 0)] + boundTex[uint2(0, 1)]);
         }
-        else if (id.x == 0 && id.y == maxHeight){
-            temp[uint2(0, maxHeight)] = 0.5f * (boundTex[uint2(1, maxHeight)] + boundTex[uint2(0, maxHeight-1)]);
+        else if (id.x == 0 && id.y == maxHeight-1){
+            temp[uint2(0, maxHeight-1)] = 0.5f * (boundTex[uint2(1, maxHeight-1)] + boundTex[uint2(0, maxHeight-2)]);
         }
-        else if (id.x == maxWidth && id.y == 0){
-            temp[uint2(maxWidth, 0)] = 0.5f * (boundTex[uint2(maxWidth-1, 0)] + boundTex[uint2(maxWidth, 1)]);
+        else if (id.x == maxWidth-1 && id.y == 0){
+            temp[uint2(maxWidth-1, 0)] = 0.5f * (boundTex[uint2(maxWidth-2, 0)] + boundTex[uint2(maxWidth-1, 1)]);
         }
-        else if (id.x == maxWidth && id.y == maxHeight){
-            temp[uint2(maxWidth, maxHeight)] = 0.5f * (boundTex[uint2(maxWidth-1, maxHeight)] + boundTex[uint2(maxWidth, maxHeight-1)]);
+        else if (id.x == maxWidth-1 && id.y == maxHeight-1){
+            temp[uint2(maxWidth-1, maxHeight-1)] = 0.5f * (boundTex[uint2(maxWidth-2, maxHeight-1)] + boundTex[uint2(maxWidth-1, maxHeight-2)]);
+        }*/
+
+        if(id.x == 0){
+            temp[uint2(0, id.y)] = 0.0f;
         }
-        /*temp[uint2(0, 0)] = 0.5f * (boundTex[uint2(1, 0)] + boundTex[uint2(0, 1)]);
-        temp[uint2(0, maxHeight)] = 0.5f * (boundTex[uint2(1, maxHeight)] + boundTex[uint2(0, maxHeight-1)]);
-        temp[uint2(maxWidth, 0)] = 0.5f * (boundTex[uint2(maxWidth-1, 0)] + boundTex[uint2(maxWidth, 1)]);
-        temp[uint2(maxWidth, maxHeight)] = 0.5f * (boundTex[uint2(maxWidth-1, maxHeight)] + boundTex[uint2(maxWidth, maxHeight-1)]);
-        */
+        else if(id.x == maxWidth-1){
+            temp[uint2(maxWidth-1, id.y)] = 0.0f;
+        }
+        if(id.y == 0){
+            temp[uint2(id.x, 0)] = 0.0f;
+        }
+        else if(id.y == maxHeight-1){
+            temp[uint2(id.x, maxHeight-1)] = 0.0f;
+        }
         boundTex[id] = temp[id];
+
     }
+
 
 void linSolve(int bound, RWTexture2D<float> next, RWTexture2D<float> prev, float a, float c, uint2 id)
     {
@@ -77,13 +99,13 @@ void linSolve(int bound, RWTexture2D<float> next, RWTexture2D<float> prev, float
     }
 
 void diffuse(int bound, RWTexture2D<float> next, RWTexture2D<float> prev, float spread, uint2 id){
-    float a = dt * spread * (maxWidth - 1) * (maxHeight - 1);
+    float a = dt * spread * (maxWidth - 2) * (maxHeight - 2);
     linSolve(bound, next, prev, a, 1 + 4 * a, id);
 }
 
 void advect(int bound, RWTexture2D<float> next, RWTexture2D<float> prev, RWTexture2D<float> velX, RWTexture2D<float> velY, uint2 id)
 {    
-    float x = id.x - dt * maxWidth-1 * velX[id.xy];
+    /*float x = id.x - dt * maxWidth-1 * velX[id.xy];
     float y = id.y - dt * maxHeight-1 * velY[id.xy];
 
     if(x < 0.5f) x = 0.5f;
@@ -103,28 +125,51 @@ void advect(int bound, RWTexture2D<float> next, RWTexture2D<float> prev, RWTextu
 
     next[id.xy] = s0 * (t0 * prev[uint2(i0, j0)] + t1 * prev[uint2(i0, j1)]) +
                     s1 * (t0 * prev[uint2(i1, j0)] + t1 * prev[uint2(i1, j1)]);
+*/
+    //if (any(id >= _Resolution))
+	//	return;
+
+	/*float2 dt0 = dt * (float2(maxWidth, maxHeight) - 2);
+	float2 vec = float2(id) - dt0 * float2(velX[id], velY[id]);
+	vec = clamp(vec, 0.5, (float2(maxWidth, maxHeight) - 2) + 0.5);*/
+    
+	float2 dt0 = dt * (float2(maxWidth-2.0f, maxHeight-2.0f));
+	float2 vec = float2(id) - dt0 * float2(velX[id], velY[id]);
+	vec = clamp(vec, 0.5, (float2(maxWidth-2.0f, maxHeight-2.0f)) + 0.5);
+
+	uint2 xy0 = (uint2) vec;
+	uint2 xy1 = xy0 + 1;
+
+	float2 st1 = vec - xy0;
+	float2 st0 = 1 - st1;
+
+	next[id] = 
+		st0.x * (st0.y * prev[xy0] +
+			     st1.y * prev[uint2(xy0.x, xy1.y)]) +
+		st1.x * (st0.y * prev[uint2(xy1.x, xy0.y)] +
+			     st1.y * prev[xy1]);
 
         setBnd(bound, next, id);
     }
 
-void project(RWTexture2D<float> velocX, RWTexture2D<float> velocY, RWTexture2D<float> p, RWTexture2D<float> div, uint2 id)
+void project(RWTexture2D<float> velocX, RWTexture2D<float> velocY, RWTexture2D<float> pressure, RWTexture2D<float> divergence, uint2 id)
     {
         
-        div[uint2(id.xy)] = -0.5f *
+        divergence[uint2(id.xy)] = -0.5f *
                     (velocX[uint2(id.x+1, id.y)] -
                       velocX[uint2(id.x-1, id.y)] +
                       velocY[uint2(id.x, id.y+1)] -
-                      velocY[uint2(id.x, id.y-1)]) / ((maxWidth+1 + maxHeight+1)/2);
+                      velocY[uint2(id.x, id.y-1)]) / ((maxWidth + maxHeight)/2.0f);
         
-        p[uint2(id.xy)] = 0;
+        pressure[uint2(id.xy)] = 0;
 
-        setBnd(0, div, id);
-        setBnd(0, p, id);
-        linSolve(0, p, div, 1, 4, id);
+        setBnd(0, divergence, id);
+        setBnd(0, pressure, id);
+        linSolve(0, pressure, divergence, 1, 4, id);
 
         
-        velocX[id.xy] -= 0.5f * (p[uint2(id.x+1, id.y)] - p[uint2(id.x-1, id.y)]) * (maxWidth+1);
-        velocY[id.xy] -= 0.5f * (p[uint2(id.x, id.y+1)] - p[uint2(id.x, id.y-1)]) * (maxHeight+1);
+        velocX[id.xy] -= 0.5f * (pressure[uint2(id.x+1, id.y)] - pressure[uint2(id.x-1, id.y)]) * (maxWidth);
+        velocY[id.xy] -= 0.5f * (pressure[uint2(id.x, id.y+1)] - pressure[uint2(id.x, id.y-1)]) * (maxHeight);
 
         setBnd(1, velocX, id);
         setBnd(2, velocY, id);
@@ -134,7 +179,9 @@ void project(RWTexture2D<float> velocX, RWTexture2D<float> velocY, RWTexture2D<f
 [numthreads(20,20,1)]
 void navierStokes(uint2 id : SV_DispatchThreadID)
     {
-        InputTex.GetDimensions(maxWidth, maxHeight);
+        //InputTex.GetDimensions(maxWidth, maxHeight);
+        maxWidth = 20;
+        maxHeight = 20;
         //mixing and spreading out. 1: left and right edge, 2: top and bottom edge
         diffuse(1, velXprev, velXnext, visc, id);
         diffuse(2, velYprev, velYnext, visc, id);
@@ -148,18 +195,14 @@ void navierStokes(uint2 id : SV_DispatchThreadID)
 
         //sets the boxes to equilibrium, has to be incompressible
         project(velXnext, velYnext, velXprev, velYprev, id);
-
-        //mixing and spreading out. 0: not att edge
+    
+        //mixing and spreading out. 0: not at edge
         diffuse(0, InputTex, OutputTex, diffusion, id);
 
-        //moves dye from velocity. 0: not att edge
+        //moves dye from velocity. 0: not at edge
         advect(0, OutputTex, InputTex, velXnext, velYnext, id);
-
         // Swap the textures
-        RWTexture2D<float> temp = velXprev;
-        velXprev = velXnext;
-        velXnext = temp;
-        temp = velYprev;
+        /*velXprev = velXnext;
         velYprev = velYnext;
-        velYnext = temp;
+        InputTex = OutputTex;*/
     }
