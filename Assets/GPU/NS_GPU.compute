@@ -12,11 +12,13 @@
 
 // Simulation parameters
 #define dt 0.001
-#define viscosity 0.01
-#define diffusion 0.01
+//#define viscosity 0.001
+//#define diffusion 0.000001
 
-#define Width 20
-#define Height 20
+float spread;
+
+int Width;
+int Height;
 
 float hitPosX;
 float hitPosY;
@@ -45,20 +47,19 @@ void Advection(uint2 id : SV_DispatchThreadID)
 	float2 st0 = 1 - st1;
 
 	Out[id] = 
-		st0.x * (st0.y * In[xy0] +
-			     st1.y * In[uint2(xy0.x, xy1.y)]) +
-		st1.x * (st0.y * In[uint2(xy1.x, xy0.y)] +
-			     st1.y * In[xy1]);
+		st0.x * (st0.y * In[xy0] + st1.y * In[uint2(xy0.x, xy1.y)]) +
+		st1.x * (st0.y * In[uint2(xy1.x, xy0.y)] + st1.y * In[xy1]);
 
 }
 
 [numthreads(20, 20, 1)]
 void Diffusion(uint2 id : SV_DispatchThreadID)
 {
-    float a = dt * viscosity * (Width - 2) * (Height - 2);
+    float a = dt * spread * (Width - 2) * (Height - 2);
 
-    Out[id] = (In[id] + a * (Out[id + uint2(1, 0)] + Out[id + uint2(-1, 0)] + 
-                    Out[id + uint2(0, 1)] + Out[id + uint2(0, -1)])) / (1 + 4 * a);
+    Out[id] = 
+            (In[id] + a * (Out[id + uint2(1, 0)] + Out[id + uint2(-1, 0)] + 
+            Out[id + uint2(0, 1)] + Out[id + uint2(0, -1)])) / (1 + 4 * a);
 }
 
 [numthreads(20, 20, 1)]
@@ -68,7 +69,8 @@ void Projection(uint2 id : SV_DispatchThreadID)
                     (Velocity[uint2(id.x+1, id.y)].x -
                       Velocity[uint2(id.x-1, id.y)].x +
                       Velocity[uint2(id.x, id.y+1)].y -
-                      Velocity[uint2(id.x, id.y-1)].y) / ((Width + Height)/2.0f);
+                      Velocity[uint2(id.x, id.y-1)].y) / 
+                      ((Width + Height)/2.0f);
         
     Pressure[uint2(id.xy)] = 0;
     
@@ -77,7 +79,8 @@ void Projection(uint2 id : SV_DispatchThreadID)
 [numthreads(20, 20, 1)]
 void Projection2(uint2 id : SV_DispatchThreadID) 
 {
-    Pressure[id] = (Divergence[id] + (PressurePrev[id + uint2(1, 0)] + PressurePrev[id + uint2(-1, 0)] + 
+    Pressure[id] = 
+                (Divergence[id] + (PressurePrev[id + uint2(1, 0)] + PressurePrev[id + uint2(-1, 0)] + 
                 PressurePrev[id + uint2(0, 1)] + PressurePrev[id + uint2(0, -1)])) / 4;
 }
 
@@ -115,11 +118,11 @@ void SetBoundsY(uint id : SV_DispatchThreadID)
 [numthreads(1, 1, 1)]
 void AddValue(uint2 id : SV_DispatchThreadID)
 {
-	Out[uint2(hitPosX, hitPosY)] += 0.5f;
+	Out[uint2(hitPosX, hitPosY)] += 10.0f;
 }
 
 [numthreads(1, 1, 1)]
 void AddVelocity(uint2 id : SV_DispatchThreadID)
 {
-	Out[uint2(hitPosX, hitPosY)] += float2(xAmount, yAmount)*10.0f;
+	Out[uint2(hitPosX, hitPosY)] = float2(xAmount, yAmount)*(Width*Height)/2.0f;
 }

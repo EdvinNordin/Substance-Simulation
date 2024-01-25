@@ -52,6 +52,7 @@
      <Compile Include="Assets\CPU\LatticeBoltzmann.cs" />
      <Compile Include="Assets\Testing\StableFluids2D.cs" />
      <None Include="Assets\GPU\NS_GPU.compute" />
+     <None Include="Assets\GPU\UpdateVertices.shader" />
      <None Include="Assets\GPU\WaveEquation.compute" />
      <None Include="Assets\Testing\StableFluids2D.compute" />
     <Reference Include="UnityEngine">

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Script that generates a plane with width and depth.
+/// Script that generates a plane with width and height.
 /// </summary>
 public class PlaneGenerator : MonoBehaviour
 {
@@ -11,17 +11,13 @@ public class PlaneGenerator : MonoBehaviour
     private MeshFilter meshFilter;
 
     // Width of our quad.
-    [SerializeField]
-    [Range(1, 100)]
-    private int widthInput = 2;
+    public int widthInput = 2;
 
-    // Depth of our plane.
-    [SerializeField]
-    [Range(1, 100)]
-    private int depthInput = 2;
+    // height of our plane.
+    public int heightInput = 2;
 
     int width;
-    int depth;
+    int height;
 
     /// <summary>
     /// Unity method called on first frame.
@@ -30,7 +26,7 @@ public class PlaneGenerator : MonoBehaviour
     {
         meshFilter = GetComponent<MeshFilter>();
         width = widthInput-1;
-        depth = depthInput-1;
+        height = heightInput-1;
         GeneratePlane();
     }
 
@@ -43,22 +39,22 @@ public class PlaneGenerator : MonoBehaviour
         Mesh mesh = new Mesh();
 
         // Defining vertices.
-        Vector3[] vertices = new Vector3[(width + 1) * (depth + 1)];
+        Vector3[] vertices = new Vector3[(width + 1) * (height + 1)];
 
         int i = 0;
-        for (int d = 0; d <= depth; d++)
+        for (int d = 0; d <= height; d++)
         {
             for (int w = 0; w <= width; w++)
             {
-                vertices[i] = new Vector3(w, 0, d) - new Vector3(width / 2f, 0, depth / 2f);
+                vertices[i] = new Vector3(w, 0, d) - new Vector3(width / 2f, 0, height / 2f);
                 i++;
             }
         }
 
         // Defining triangles.
-        int[] triangles = new int[width * depth * 2 * 3]; // 2 - polygon per quad, 3 - corners per polygon
+        int[] triangles = new int[width * height * 2 * 3]; // 2 - polygon per quad, 3 - corners per polygon
 
-        for (int d = 0; d < depth; d++)
+        for (int d = 0; d < height; d++)
         {
             for (int w = 0; w < width; w++)
             {
@@ -78,14 +74,14 @@ public class PlaneGenerator : MonoBehaviour
         }
 
         // Defining UV.
-        Vector2[] uv = new Vector2[(width + 1) * (depth + 1)];
+        Vector2[] uv = new Vector2[(width + 1) * (height + 1)];
 
         i = 0;
-        for (int d = 0; d <= depth; d++)
+        for (int d = 0; d <= height; d++)
         {
             for (int w = 0; w <= width; w++)
             {
-                uv[i] = new Vector2(w / (float)width, d / (float)depth);
+                uv[i] = new Vector2(w / (float)width, d / (float)height);
                 i++;
             }
         }
@@ -101,5 +97,10 @@ public class PlaneGenerator : MonoBehaviour
 
         MeshCollider meshCollider = gameObject.AddComponent<MeshCollider>();
         meshCollider.sharedMesh = mesh;
+    }
+
+    public Vector2 getPlaneSize()
+    {
+        return new Vector2(width, height);
     }
 }
