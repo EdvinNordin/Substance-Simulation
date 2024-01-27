@@ -19,6 +19,8 @@ public class NS_GPU : MonoBehaviour
     private int setBoundsYKernel;
     private int addValueKernel;
     private int addVelocityKernel;
+    private int selectChannelKernel;
+    private int combineChannelsKernel;
 
     private RenderTexture densityTexture;
     private RenderTexture densityPrevTexture;
@@ -57,6 +59,8 @@ public class NS_GPU : MonoBehaviour
         setBoundsYKernel = navierStokesShader.FindKernel("SetBoundsY");
         addValueKernel = navierStokesShader.FindKernel("AddValue");
         addVelocityKernel = navierStokesShader.FindKernel("AddVelocity");
+        selectChannelKernel = navierStokesShader.FindKernel("SelectChannel");
+        combineChannelsKernel = navierStokesShader.FindKernel("CombineChannels");
         
         resolution = new Vector2Int(planeWidth, planeHeight);
         threadGroupAmount = new Vector3Int(planeWidth, planeHeight, 1);
@@ -74,11 +78,11 @@ public class NS_GPU : MonoBehaviour
         navierStokesShader.SetInt("Height", planeHeight);
 
 
-        densityTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.RFloat);
+        densityTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.RGFloat);
         densityTexture.enableRandomWrite = true;
         densityTexture.Create();
 
-        densityPrevTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.RFloat); 
+        densityPrevTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.RGFloat); 
         densityPrevTexture.enableRandomWrite = true;
         densityPrevTexture.Create();
 
@@ -113,7 +117,6 @@ public class NS_GPU : MonoBehaviour
 
     void Update()
     {
-        ChangeTexture();
 
         Diffuse(velocityPrevTexture, velocityTexture, true, viscosity);
         Projection();
@@ -123,12 +126,13 @@ public class NS_GPU : MonoBehaviour
 
         Diffuse(densityPrevTexture, densityTexture, false, diffusion);
         Graphics.CopyTexture(densityTexture, densityPrevTexture);  // Swap output to input
-        Advect(densityPrevTexture, densityTexture);
+        Advect(densityPrevTexture, densityTexture, false);
+        ChangeTexture();
 
         //update the vertices based on the density texture
         Renderer rend = GetComponent<Renderer> ();
         rend.material = new Material(updateVerticesShader);
-        rend.material.mainTexture = densityTexture;
+        //rend.material.mainTexture = densityTexture;
         rend.material.SetTexture("_MainTex", densityTexture);
 
     }
@@ -151,11 +155,7 @@ public class NS_GPU : MonoBehaviour
             {
                 //Debug.Log(GetClosestVertex(hit, triangles));
                 MeshCollider meshCollider = hit.collider as MeshCollider;
-                if (meshCollider == null || meshCollider.sharedMesh == null)
-                {
-
-                }
-                else
+                if (meshCollider != null && meshCollider.sharedMesh != null)
                 {
                     int vertexHit = GetClosestVertex(hit, triangles);
                     int x = vertexHit % planeWidth;
@@ -166,6 +166,7 @@ public class NS_GPU : MonoBehaviour
                     navierStokesShader.SetTexture(addValueKernel, "Out", densityTexture);
                     navierStokesShader.Dispatch(addValueKernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
                 }
+                
             }
         }
         if (Input.GetMouseButton(1))
@@ -177,30 +178,29 @@ public class NS_GPU : MonoBehaviour
                 //Debug.Log(GetClosestVertex(hit, triangles));
                 MeshCollider meshCollider = hit.collider as MeshCollider;
                 
-                if (meshCollider == null || meshCollider.sharedMesh == null)
+                if (meshCollider != null && meshCollider.sharedMesh != null)
                 {
-
-                }
-                else
-                {
-
                     int vertexHit = GetClosestVertex(hit, triangles);
                     int x = vertexHit % planeWidth;
                     int y = vertexHit / planeWidth;
-                    
+
+                    float xAmount = mousePosition.x - previousMousePosition.x;
+                    float yAmount = mousePosition.y - previousMousePosition.y;
+                    //Debug.Log(mousePosition.y - previousMousePosition.y);
                     navierStokesShader.SetFloat("hitPosX", x);
                     navierStokesShader.SetFloat("hitPosY", y);
-                    navierStokesShader.SetFloat("xAmount", mousePosition.x - previousMousePosition.x);
-                    navierStokesShader.SetFloat("yAmount", mousePosition.y - previousMousePosition.y);
+                    navierStokesShader.SetFloat("xAmount", xAmount);
+                    navierStokesShader.SetFloat("yAmount", yAmount);
 
-                    navierStokesShader.SetTexture(addVelocityKernel, "Out", velocityTexture);
+                    navierStokesShader.SetTexture(addVelocityKernel, "Velocity", velocityTexture);
                     navierStokesShader.Dispatch(addVelocityKernel, 1, 1, 1);
+
                 }
             }
         }
-        
-        previousMousePosition = mousePosition;
         //Debug.Log((mousePosition.x - previousMousePosition.x) + " " + (mousePosition.y - previousMousePosition.y));
+    
+        previousMousePosition = mousePosition;
     }
 
     void Diffuse(RenderTexture inTexture, RenderTexture outTexture, bool setBounds, float spread)
@@ -216,17 +216,17 @@ public class NS_GPU : MonoBehaviour
     }
 
     void Advect(RenderTexture inTexture, RenderTexture outTexture, bool setBounds = false)
-        {
-            // Copy velocityInTexture to a temporary buffer so that we do not bind it to both
-            // Velocity and XIn buffers at the same time, since that breaks simulation on Windows machines for some reason...
-            Graphics.CopyTexture(velocityPrevTexture, velocityTempTexture);
-        
-            navierStokesShader.SetTexture(advectionKernel, "Velocity", velocityTempTexture);
-            navierStokesShader.SetTexture(advectionKernel, "In", inTexture);
-            navierStokesShader.SetTexture(advectionKernel, "Out", outTexture);
-            navierStokesShader.Dispatch(advectionKernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
-            if (setBounds) SetBounds(inTexture, outTexture);
-        }
+    {
+        // Copy velocityInTexture to a temporary buffer so that we do not bind it to both
+        // Velocity and XIn buffers at the same time, since that breaks simulation on Windows machines for some reason...
+        Graphics.CopyTexture(velocityPrevTexture, velocityTempTexture);
+    
+        navierStokesShader.SetTexture(advectionKernel, "Velocity", velocityTempTexture);
+        navierStokesShader.SetTexture(advectionKernel, "In", inTexture);
+        navierStokesShader.SetTexture(advectionKernel, "Out", outTexture);
+        navierStokesShader.Dispatch(advectionKernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
+        if (setBounds) SetBounds(inTexture, outTexture);
+    }
 
     void Projection()
     {
@@ -259,12 +259,59 @@ public class NS_GPU : MonoBehaviour
 
     private void SetBounds(RenderTexture inTexture, RenderTexture outTexture)
     { 
-        navierStokesShader.SetTexture(setBoundsXKernel, "In", outTexture);
-        navierStokesShader.SetTexture(setBoundsXKernel, "Out", inTexture);
-        navierStokesShader.Dispatch(setBoundsXKernel, 5, 1, 1);
+        /*RenderTexture xInTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.RFloat);
+        xInTexture.enableRandomWrite = true;
+        xInTexture.Create();
+
+        RenderTexture yInTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.RFloat);
+        yInTexture.enableRandomWrite = true;
+        yInTexture.Create();
+        
+        RenderTexture xOutTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.RFloat);
+        xOutTexture.enableRandomWrite = true;
+        xOutTexture.Create();
+
+        RenderTexture yOutTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.RFloat);
+        yOutTexture.enableRandomWrite = true;
+        yOutTexture.Create();
+
+
+        navierStokesShader.SetInt("Channel", 0); // Select the red channel
+        navierStokesShader.SetTexture(selectChannelKernel, "Velocity", inTexture);
+        navierStokesShader.SetTexture(selectChannelKernel, "Out", xInTexture);
+        navierStokesShader.Dispatch(selectChannelKernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
+       
+        navierStokesShader.SetInt("Channel", 1); // Select the red channel
+        navierStokesShader.SetTexture(selectChannelKernel, "Velocity", inTexture);
+        navierStokesShader.SetTexture(selectChannelKernel, "Out", yInTexture);
+        navierStokesShader.Dispatch(selectChannelKernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
+        
+
+        navierStokesShader.SetInt("Channel", 0); // Select the red channel
+        navierStokesShader.SetTexture(selectChannelKernel, "Velocity", outTexture);
+        navierStokesShader.SetTexture(selectChannelKernel, "Out", xOutTexture);
+        navierStokesShader.Dispatch(selectChannelKernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
+        
+        navierStokesShader.SetInt("Channel", 1); // Select the red channel
+        navierStokesShader.SetTexture(selectChannelKernel, "Velocity", outTexture);
+        navierStokesShader.SetTexture(selectChannelKernel, "Out", yOutTexture);
+        navierStokesShader.Dispatch(selectChannelKernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
+        */
+
+        navierStokesShader.SetTexture(setBoundsXKernel, "In", outTexture);//swap xIn and xOut?
+        navierStokesShader.SetTexture(setBoundsXKernel, "Out", inTexture );
+        navierStokesShader.Dispatch(setBoundsXKernel, xThreadGroups, 1, 1);
+
         navierStokesShader.SetTexture(setBoundsYKernel, "In", inTexture);
         navierStokesShader.SetTexture(setBoundsYKernel, "Out", outTexture);
-        navierStokesShader.Dispatch(setBoundsYKernel, 5, 1, 1);
+        navierStokesShader.Dispatch(setBoundsYKernel, yThreadGroups, 1, 1);
+
+
+        /*navierStokesShader.SetTexture(combineChannelsKernel, "In", xOutTexture);
+        navierStokesShader.SetTexture(combineChannelsKernel, "In2", yOutTexture);
+        navierStokesShader.SetTexture(combineChannelsKernel, "Velocity", outTexture);
+        navierStokesShader.Dispatch(combineChannelsKernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
+    */
     }
 
     public static int GetClosestVertex(RaycastHit aHit, int[] aTriangles)

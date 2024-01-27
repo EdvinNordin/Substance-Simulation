@@ -9,16 +9,20 @@
 #pragma kernel SetBoundsY
 #pragma kernel AddValue
 #pragma kernel AddVelocity
+#pragma kernel SelectChannel
+#pragma kernel CombineChannels
 
 // Simulation parameters
-#define dt 0.001
+#define dt 0.0005
 //#define viscosity 0.001
 //#define diffusion 0.000001
 
 float spread;
 
-int Width;
-int Height;
+uint Width;
+uint Height;
+
+int Channel;
 
 float hitPosX;
 float hitPosY;
@@ -26,24 +30,24 @@ float hitPosY;
 float xAmount;
 float yAmount;
 
-Texture2D<float> In;  // Input Texture
-RWTexture2D<float> Out;  // Output Texture
-RWTexture2D<float2> Velocity;  // Output Texture
-RWTexture2D<float> Pressure;  // Output Texture
-RWTexture2D<float> PressurePrev;  // Output Texture
-RWTexture2D<float> Divergence;  // Output Texture
+Texture2D<float2> In;  // Input Texture
+RWTexture2D<float2> Out;  // Output Texture
+RWTexture2D<float2> Velocity;  // Velocity Texture
+RWTexture2D<float> Pressure;  // Pressure Texture
+Texture2D<float> PressurePrev;  // Previous Pressure Texture
+RWTexture2D<float> Divergence;  // Divergence Texture
 
 [numthreads(20, 20, 1)]
 void Advection(uint2 id : SV_DispatchThreadID)
 {
     float2 dt0 = dt * (float2(Width-2.0f, Height-2.0f));
 	float2 vec = float2(id) - dt0 * float2(Velocity[id].x, Velocity[id].y);
-	vec = clamp(vec, 0.5, (float2(Width-2.0f, Height-2.0f)) + 0.5);
+	vec = clamp(vec.xy, 0.5, (float2(Width-2.0f, Height-2.0f)) + 0.5);
 
-	uint2 xy0 = (uint2) vec;
+	uint2 xy0 = (uint2) vec.xy;
 	uint2 xy1 = xy0 + 1;
 
-	float2 st1 = vec - xy0;
+	float2 st1 = vec.xy - xy0;
 	float2 st0 = 1 - st1;
 
 	Out[id] = 
@@ -57,7 +61,7 @@ void Diffusion(uint2 id : SV_DispatchThreadID)
 {
     float a = dt * spread * (Width - 2) * (Height - 2);
 
-    Out[id] = 
+    Out[id] =
             (In[id] + a * (Out[id + uint2(1, 0)] + Out[id + uint2(-1, 0)] + 
             Out[id + uint2(0, 1)] + Out[id + uint2(0, -1)])) / (1 + 4 * a);
 }
@@ -65,14 +69,14 @@ void Diffusion(uint2 id : SV_DispatchThreadID)
 [numthreads(20, 20, 1)]
 void Projection(uint2 id : SV_DispatchThreadID) 
 {
-    Divergence[uint2(id.xy)] = -0.5f *
-                    (Velocity[uint2(id.x+1, id.y)].x -
-                      Velocity[uint2(id.x-1, id.y)].x +
-                      Velocity[uint2(id.x, id.y+1)].y -
-                      Velocity[uint2(id.x, id.y-1)].y) / 
-                      ((Width + Height)/2.0f);
+    Divergence[uint2(id)] = -0.5f *
+                    ((Velocity[uint2(id.x+1, id.y)].x -
+                      Velocity[uint2(id.x-1, id.y)].x)/Width +
+                      (Velocity[uint2(id.x, id.y+1)].y -
+                      Velocity[uint2(id.x, id.y-1)].y)/ 
+                      Height);
         
-    Pressure[uint2(id.xy)] = 0;
+    Pressure[uint2(id)] = 0;
     
 }
 
@@ -88,30 +92,31 @@ void Projection2(uint2 id : SV_DispatchThreadID)
 void Projection3(uint2 id : SV_DispatchThreadID) 
 {
     float2 newVelocity;
-    newVelocity.x = Velocity[id.xy].x - 0.5f * (PressurePrev[uint2(id.x+1, id.y)] - PressurePrev[uint2(id.x-1, id.y)]) * (Width);
-    newVelocity.y = Velocity[id.xy].y - 0.5f * (PressurePrev[uint2(id.x, id.y+1)] - PressurePrev[uint2(id.x, id.y-1)]) * (Height);
-    Velocity[id.xy] = newVelocity;
+    newVelocity.x = Velocity[id].x - 0.5f * (PressurePrev[uint2(id.x+1, id.y)] - PressurePrev[uint2(id.x-1, id.y)]) * (Width);
+    newVelocity.y = Velocity[id].y - 0.5f * (PressurePrev[uint2(id.x, id.y+1)] - PressurePrev[uint2(id.x, id.y-1)]) * (Height);
+    Velocity[id] = newVelocity;
+
 }
 
 [numthreads(40, 1, 1)]
 void SetBoundsX(uint id : SV_DispatchThreadID)
 {
-    if (id.x < 20){
+    if (id.x < Width/2){
         Out[uint2(0, id.x)] = -In[uint2(1, id.x)];
     }
     else{
-        Out[uint2(19, id.x-20)] = -In[uint2(18, id.x-20)];
+        Out[uint2(Width-1, id.x-Width/2)] = -In[uint2(Width-2, id.x-Width/2)];
     }
 }
 
 [numthreads(40, 1, 1)]
 void SetBoundsY(uint id : SV_DispatchThreadID)
 {
-    if (id.x < 20){
+    if (id.x < Height/2){
         Out[uint2(id.x, 0)] = -In[uint2(id.x, 1)];
     }
     else{
-        Out[uint2(id.x-20, 19)] = -In[uint2(id.x-20, 18)];
+        Out[uint2(id.x-Height/2, Height-1)] = -In[uint2(id.x-Height/2, Height-2)];
     }
 }
 
@@ -121,8 +126,27 @@ void AddValue(uint2 id : SV_DispatchThreadID)
 	Out[uint2(hitPosX, hitPosY)] += 10.0f;
 }
 
+
 [numthreads(1, 1, 1)]
 void AddVelocity(uint2 id : SV_DispatchThreadID)
 {
-	Out[uint2(hitPosX, hitPosY)] = float2(xAmount, yAmount)*(Width*Height)/2.0f;
+    float2 newVelocity;
+    newVelocity.y = yAmount * Height;
+    newVelocity.x = xAmount * Width;
+	Velocity[uint2(hitPosX, hitPosY)] += newVelocity;//float2(xAmount, yAmount)*(Width*Height)/2.0f;
+}
+
+[numthreads(20, 20, 1)]
+void SelectChannel (uint2 id : SV_DispatchThreadID)
+{
+    float2 sourcePixel = Velocity[id];
+    Out[id] = sourcePixel[Channel];
+}
+
+[numthreads(20, 20, 1)]
+void CombineChannels (uint2 id : SV_DispatchThreadID)
+{
+    float sourcePixel1 = In[id];
+    float sourcePixel2 = In[id];
+    Out[id] = float2(sourcePixel1, sourcePixel2);
 }

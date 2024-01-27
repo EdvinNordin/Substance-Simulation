@@ -364,7 +364,7 @@ MonoBehaviour:
   navierStokesShader: {fileID: 7200000, guid: e3b6faf16cbda284e911d064f7914cab, type: 3}
   updateVerticesShader: {fileID: 4800000, guid: 65b97dfb836070d4682bfc74aaf2a8b8, type: 3}
   diffusion: 0.01
-  viscosity: 0.01
+  viscosity: 0.00001
 --- !u!1 &471310729 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 4180642826444304927, guid: aed48f874cbe13f4e8f1bd4edd066cfe, type: 3}

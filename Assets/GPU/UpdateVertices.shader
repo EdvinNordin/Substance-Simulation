@@ -32,7 +32,7 @@ Shader "UpdateVertices"
             {
                 v2f o;
                 float4 worldPos = mul(unity_ObjectToWorld, v.vertex);
-                float displacement = tex2Dlod(_MainTex, float4(v.uv, 0, 0)).r * 1.0f;
+                float displacement = tex2Dlod(_MainTex, float4(v.uv, 0, 0)).r * 10.0f;
                 worldPos.y += displacement;
                 o.vertex = mul(UNITY_MATRIX_VP, worldPos);
                 o.uv = v.uv;
