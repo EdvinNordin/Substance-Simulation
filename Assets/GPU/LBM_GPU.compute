@@ -1,0 +1,52 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWTexture2D<float3> f;
+RWTexture2D<float3> fNew;
+RWTexture2D<float3> fEq;
+
+[numthreads(20,20,9)]
+void Collision (uint3 id : SV_DispatchThreadID)
+{
+    
+    
+}
+
+
+[numthreads(8, 8, 1)]
+void ComputeShaderMain(uint3 dispatchThreadID : SV_DispatchThreadID)
+{
+    int2 index = int2(dispatchThreadID.xy);
+
+    if (index.x < nx && index.y < ny) {
+        float rhoTmp = 0.0;
+        float mXTmp = 0.0;
+        float mYTmp = 0.0;
+
+        for (int k = 0; k < q; k++) {
+            rhoTmp += fTexture.Load(int3(index.x, index.y, k)).x;
+            mXTmp += fTexture.Load(int3(index.x, index.y, k)).x * latticeDirXTexture.Load(int3(k, 0, 0)).x;
+            mYTmp += fTexture.Load(int3(index.x, index.y, k)).x * latticeDirYTexture.Load(int3(k, 0, 0)).x;
+        }
+
+        rhoTmp += inputRhoTexture.Load(int3(index.x, index.y, 0)).x;
+        inputRhoTexture[int2(index.x, index.y)] = 0.0;
+
+        if (rhoTmp < 0.1) {
+            rhoTmp = 0.1;
+        }
+
+        rhoTexture[int2(index.x, index.y)] = rhoTmp;
+        velXTexture[int2(index.x, index.y)] = mXTmp / rhoTmp;
+        velYTexture[int2(index.x, index.y)] = mYTmp / rhoTmp;
+
+        for (int k = 0; k < q; k++) {
+            float vu = latticeDirXTexture.Load(int3(k, 0, 0)).x * velXTexture[int2(index.x, index.y)] + latticeDirYTexture.Load(int3(k, 0, 0)).x * velYTexture[int2(index.x, index.y)];
+            float uu = velXTexture[int2(index.x, index.y)] * velXTexture[int2(index.x, index.y)] + velYTexture[int2(index.x, index.y)] * velYTexture[int2(index.x, index.y)];
+            feqTexture[int3(index.x, index.y, k)] = latticeWeightTexture.Load(int3(k, 0, 0)).x * rhoTexture[int2(index.x, index.y)] * (1.0 + 3.0 * vu + 9.0 / 2.0 * vu * vu + 3.0 / 2.0 * uu);
+            fnewTexture[int3(index.x, index.y, k)] = fTexture.Load(int3(index.x, index.y, k)).x - (fTexture.Load(int3(index.x, index.y, k)).x - feqTexture[int3(index.x, index.y, k)]) / tau;
+        }
+    }
+}
