@@ -358,6 +358,7 @@
 "Assets/CPU/LBM.cs"
 "Assets/CPU/NavierStokes.cs"
 "Assets/CPU/NoConShallowWater.cs"
+"Assets/GPU/LBM_GPU.cs"
 "Assets/GPU/NS_GPU.cs"
 "Assets/GPU/WEGPU.cs"
 "Assets/PlaneGenerator.cs"

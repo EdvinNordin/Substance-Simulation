@@ -59,8 +59,6 @@ public class NS_GPU : MonoBehaviour
         setBoundsYKernel = navierStokesShader.FindKernel("SetBoundsY");
         addValueKernel = navierStokesShader.FindKernel("AddValue");
         addVelocityKernel = navierStokesShader.FindKernel("AddVelocity");
-        selectChannelKernel = navierStokesShader.FindKernel("SelectChannel");
-        combineChannelsKernel = navierStokesShader.FindKernel("CombineChannels");
         
         resolution = new Vector2Int(planeWidth, planeHeight);
         threadGroupAmount = new Vector3Int(planeWidth, planeHeight, 1);
@@ -129,11 +127,10 @@ public class NS_GPU : MonoBehaviour
         Advect(densityPrevTexture, densityTexture, false);
         ChangeTexture();
 
-        //update the vertices based on the density texture
         Renderer rend = GetComponent<Renderer> ();
         rend.material = new Material(updateVerticesShader);
         //rend.material.mainTexture = densityTexture;
-        rend.material.SetTexture("_MainTex", densityTexture);
+        rend.material.SetTexture("importTexture", densityTexture);
 
     }
 
@@ -216,12 +213,8 @@ public class NS_GPU : MonoBehaviour
     }
 
     void Advect(RenderTexture inTexture, RenderTexture outTexture, bool setBounds = false)
-    {
-        // Copy velocityInTexture to a temporary buffer so that we do not bind it to both
-        // Velocity and XIn buffers at the same time, since that breaks simulation on Windows machines for some reason...
-        Graphics.CopyTexture(velocityPrevTexture, velocityTempTexture);
-    
-        navierStokesShader.SetTexture(advectionKernel, "Velocity", velocityTempTexture);
+    {    
+        navierStokesShader.SetTexture(advectionKernel, "Velocity", velocityPrevTexture);
         navierStokesShader.SetTexture(advectionKernel, "In", inTexture);
         navierStokesShader.SetTexture(advectionKernel, "Out", outTexture);
         navierStokesShader.Dispatch(advectionKernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
@@ -259,59 +252,14 @@ public class NS_GPU : MonoBehaviour
 
     private void SetBounds(RenderTexture inTexture, RenderTexture outTexture)
     { 
-        /*RenderTexture xInTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.RFloat);
-        xInTexture.enableRandomWrite = true;
-        xInTexture.Create();
-
-        RenderTexture yInTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.RFloat);
-        yInTexture.enableRandomWrite = true;
-        yInTexture.Create();
-        
-        RenderTexture xOutTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.RFloat);
-        xOutTexture.enableRandomWrite = true;
-        xOutTexture.Create();
-
-        RenderTexture yOutTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.RFloat);
-        yOutTexture.enableRandomWrite = true;
-        yOutTexture.Create();
-
-
-        navierStokesShader.SetInt("Channel", 0); // Select the red channel
-        navierStokesShader.SetTexture(selectChannelKernel, "Velocity", inTexture);
-        navierStokesShader.SetTexture(selectChannelKernel, "Out", xInTexture);
-        navierStokesShader.Dispatch(selectChannelKernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
        
-        navierStokesShader.SetInt("Channel", 1); // Select the red channel
-        navierStokesShader.SetTexture(selectChannelKernel, "Velocity", inTexture);
-        navierStokesShader.SetTexture(selectChannelKernel, "Out", yInTexture);
-        navierStokesShader.Dispatch(selectChannelKernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
-        
-
-        navierStokesShader.SetInt("Channel", 0); // Select the red channel
-        navierStokesShader.SetTexture(selectChannelKernel, "Velocity", outTexture);
-        navierStokesShader.SetTexture(selectChannelKernel, "Out", xOutTexture);
-        navierStokesShader.Dispatch(selectChannelKernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
-        
-        navierStokesShader.SetInt("Channel", 1); // Select the red channel
-        navierStokesShader.SetTexture(selectChannelKernel, "Velocity", outTexture);
-        navierStokesShader.SetTexture(selectChannelKernel, "Out", yOutTexture);
-        navierStokesShader.Dispatch(selectChannelKernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
-        */
-
-        navierStokesShader.SetTexture(setBoundsXKernel, "In", outTexture);//swap xIn and xOut?
+        navierStokesShader.SetTexture(setBoundsXKernel, "In", outTexture);//swap In and Out?
         navierStokesShader.SetTexture(setBoundsXKernel, "Out", inTexture );
         navierStokesShader.Dispatch(setBoundsXKernel, xThreadGroups, 1, 1);
 
         navierStokesShader.SetTexture(setBoundsYKernel, "In", inTexture);
         navierStokesShader.SetTexture(setBoundsYKernel, "Out", outTexture);
         navierStokesShader.Dispatch(setBoundsYKernel, yThreadGroups, 1, 1);
-
-
-        /*navierStokesShader.SetTexture(combineChannelsKernel, "In", xOutTexture);
-        navierStokesShader.SetTexture(combineChannelsKernel, "In2", yOutTexture);
-        navierStokesShader.SetTexture(combineChannelsKernel, "Velocity", outTexture);
-        navierStokesShader.Dispatch(combineChannelsKernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
-    */
     }
 
     public static int GetClosestVertex(RaycastHit aHit, int[] aTriangles)
@@ -332,16 +280,5 @@ public class NS_GPU : MonoBehaviour
             return aTriangles[index + 1]; // y
         else
             return aTriangles[index + 2]; // z
-    }
-    void OnDestroy()
-    {
-        /*densityTexture.Release();
-        densityPrevTexture.Release();
-        velocityTexture.Release();
-        velocityPrevTexture.Release();
-        velocityTempTexture.Release();
-        pressureTexture.Release();
-        pressurePrevTexture.Release();
-        divergenceTexture.Release();*/
     }
 }

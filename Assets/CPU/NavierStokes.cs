@@ -6,8 +6,8 @@ public class NavierStokes : MonoBehaviour
 {
 
 
-    static int nx = 30+1; // Number of grid cells in the x-direction
-    static int ny = 30+1; // Number of grid cells in the y-direction
+    static int nx = 30; // Number of grid cells in the x-direction
+    static int ny = 30; // Number of grid cells in the y-direction
 
     public int iter = 1; //iterations of calculation of the whole thing?
     //int size;
@@ -51,8 +51,8 @@ public class NavierStokes : MonoBehaviour
         {
             for(int j = 0; j < ny; j++)
             {
-                source[i,j] = 0f;
-                density[i, j] = Random.value;
+                source[i,j] = 2f;
+                density[i, j] = 0f;//Random.value;
 
                 Vx[i, j] = 0.0f;
                 Vy[i, j] = 0.0f;
@@ -94,16 +94,18 @@ public class NavierStokes : MonoBehaviour
                 MeshCollider meshCollider = hit.collider as MeshCollider;
                 if (meshCollider == null || meshCollider.sharedMesh == null)
                 {
-                    Debug.Log("nope");
 
                 }
                 else
                 {
 
-                    Debug.Log("yupp");
                     int vertexHit = GetClosestVertex(hit, triangles);
                     int a = vertexHit / nx;
                     int b = vertexHit % nx;
+                    Vx[a+1, b] += 5.5f;
+                    Vx[a-1, b] += -5.5f;
+                    Vy[a, b+1] += 5.5f;
+                    Vy[a, b-1] += -5.5f;
                     density[a, b] += 1.0f;
                 }
             }
@@ -120,8 +122,6 @@ public class NavierStokes : MonoBehaviour
                 
                 if (meshCollider == null || meshCollider.sharedMesh == null)
                 {
-                    Debug.Log("nope");
-
                 }
                 else
                 {
@@ -129,8 +129,8 @@ public class NavierStokes : MonoBehaviour
                     int vertexHit = GetClosestVertex(hit, triangles);
                     int a = vertexHit / nx;
                     int b = vertexHit % nx;
-                    Vx[a, b] += 10.0f*(xPos - prevX);
-                    Vy[a, b] += 10.0f*(yPos - prevY);
+                    Vx[a, b] += 1.0f*(xPos - prevX);
+                    Vy[a, b] += 1.0f*(yPos - prevY);
                 }
             }
         }

@@ -1,52 +1,115 @@
 // Each #kernel tells which function to compile; you can have many kernels
-#pragma kernel CSMain
+#pragma kernel Collision
+#pragma kernel Streaming
+#pragma kernel AddValue
+#pragma kernel AddVelocity
 
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
-RWTexture2D<float3> f;
-RWTexture2D<float3> fNew;
-RWTexture2D<float3> fEq;
+RWTexture3D<float> fTexture;
+RWTexture3D<float> fnewTexture;
+RWTexture3D<float> feqTexture;
+RWTexture2D<float> rhoTexture;
+RWTexture2D<float> inputRhoTexture;
+RWTexture2D<float2> velTexture;
+RWTexture2D<float> latticeTexture;
 
-[numthreads(20,20,9)]
-void Collision (uint3 id : SV_DispatchThreadID)
+#define tau 0.6
+
+float hitPosX;
+float hitPosY;
+
+float xAmount;
+float yAmount;
+
+uint width;
+uint height;
+
+[numthreads(8, 8, 1)]
+void Collision(uint2 id : SV_DispatchThreadID)
 {
+    float rhoTmp = 0.0;
+    float mXTmp = 0.0;
+    float mYTmp = 0.0;
     
+
+    for (int k = 0; k < 9; k++) 
+    {
+        rhoTmp += fTexture[uint3(id.x, id.y, k)];
+        mXTmp += fTexture[uint3(id.x, id.y, k)] * latticeTexture[uint2(k, 1)];    
+        mYTmp += fTexture[uint3(id.x, id.y, k)] * latticeTexture[uint2(k, 2)];
+    }
+
+    rhoTmp += inputRhoTexture[id];
+    inputRhoTexture[id] = 0.0;
+
+    rhoTexture[id] += rhoTmp;
+    
+    if (rhoTmp < 0.01) 
+    {
+        rhoTmp = 0.01;
+    }
+
+    velTexture[id] = float2(mXTmp / rhoTmp, mYTmp / rhoTmp);
+    //velTexture[id].y = mYTmp / rhoTmp;
+
+    for (int k = 0; k < 9; k++) 
+    {
+        float vu = latticeTexture[uint2(k, 1)] * velTexture[id].x + latticeTexture[uint2(k, 2)] * velTexture[id].y;
+        float uu = velTexture[id].x * velTexture[id].x + velTexture[id].y * velTexture[id].y;
+        feqTexture[uint3(id.x, id.y, k)] = latticeTexture[uint2(k, 3)] * rhoTexture[id] * (1.0 + 3.0 * vu + 9.0 / 2.0 * vu * vu + 3.0 / 2.0 * uu);
+        fnewTexture[uint3(id.x, id.y, k)] = fTexture[uint3(id.x, id.y, k)] - (fTexture[uint3(id.x, id.y, k)] - feqTexture[uint3(id.x, id.y, k)]) / tau;
+    }
+}
+
+[numthreads(8, 8, 1)]
+void Streaming(uint2 id : SV_DispatchThreadID)
+{
+    for (int k = 0; k < 9; k++) 
+    {
+        int x_next = (id.x + latticeTexture[uint2(k, 1)]) % width;
+        int y_next = (id.y + latticeTexture[uint2(k, 2)] ) % height;
+        fTexture[uint3(x_next, y_next, k)] = fnewTexture[uint3(id.x, id.y, k)];
+    }/*
+        int nextX = id.x + latticeTexture[uint2(k, 1)];
+        int nextY = id.y + latticeTexture[uint2(k, 2)];
+
+        if (nextX < width && nextY < height && nextX >= 0 && nextY >= 0) 
+        {
+            fTexture[uint3(nextX, nextY, k)] = fnewTexture[uint3(id.x, id.y, k)];
+        }
+        else
+        {
+            if((nextX < 0 || nextX >= width) && (nextY < 0 || nextY >= height))
+            {
+                int adjX1 = max(0, min(width - 1, nextX));
+                int adhY1 = id.y;
+                int adjX2 = id.x;
+                int adjY2 = max(0, min(height - 1, nextY));
+
+                fTexture[uint3(id.x, id.y, k)] = 0.5f * (fnewTexture[uint3(adjX1, id.y, k)]+ fnewTexture[uint3(id.x, adjY2, k)]);
+            }
+            else
+            {
+                fTexture[uint3(id.x, id.y, k)] = fnewTexture[uint3(id.x, id.y, k)]; 
+            }
+        }
+    }*/
     
 }
 
-
-[numthreads(8, 8, 1)]
-void ComputeShaderMain(uint3 dispatchThreadID : SV_DispatchThreadID)
+[numthreads(1, 1, 1)]
+void AddValue(uint2 id : SV_DispatchThreadID)
 {
-    int2 index = int2(dispatchThreadID.xy);
+	inputRhoTexture[uint2(hitPosX, hitPosY)] += 3.0f;
+}
 
-    if (index.x < nx && index.y < ny) {
-        float rhoTmp = 0.0;
-        float mXTmp = 0.0;
-        float mYTmp = 0.0;
 
-        for (int k = 0; k < q; k++) {
-            rhoTmp += fTexture.Load(int3(index.x, index.y, k)).x;
-            mXTmp += fTexture.Load(int3(index.x, index.y, k)).x * latticeDirXTexture.Load(int3(k, 0, 0)).x;
-            mYTmp += fTexture.Load(int3(index.x, index.y, k)).x * latticeDirYTexture.Load(int3(k, 0, 0)).x;
-        }
-
-        rhoTmp += inputRhoTexture.Load(int3(index.x, index.y, 0)).x;
-        inputRhoTexture[int2(index.x, index.y)] = 0.0;
-
-        if (rhoTmp < 0.1) {
-            rhoTmp = 0.1;
-        }
-
-        rhoTexture[int2(index.x, index.y)] = rhoTmp;
-        velXTexture[int2(index.x, index.y)] = mXTmp / rhoTmp;
-        velYTexture[int2(index.x, index.y)] = mYTmp / rhoTmp;
-
-        for (int k = 0; k < q; k++) {
-            float vu = latticeDirXTexture.Load(int3(k, 0, 0)).x * velXTexture[int2(index.x, index.y)] + latticeDirYTexture.Load(int3(k, 0, 0)).x * velYTexture[int2(index.x, index.y)];
-            float uu = velXTexture[int2(index.x, index.y)] * velXTexture[int2(index.x, index.y)] + velYTexture[int2(index.x, index.y)] * velYTexture[int2(index.x, index.y)];
-            feqTexture[int3(index.x, index.y, k)] = latticeWeightTexture.Load(int3(k, 0, 0)).x * rhoTexture[int2(index.x, index.y)] * (1.0 + 3.0 * vu + 9.0 / 2.0 * vu * vu + 3.0 / 2.0 * uu);
-            fnewTexture[int3(index.x, index.y, k)] = fTexture.Load(int3(index.x, index.y, k)).x - (fTexture.Load(int3(index.x, index.y, k)).x - feqTexture[int3(index.x, index.y, k)]) / tau;
-        }
-    }
+[numthreads(1, 1, 1)]
+void AddVelocity(uint2 id : SV_DispatchThreadID)
+{
+    float2 newVelocity;
+    newVelocity.y = yAmount * height * 10;
+    newVelocity.x = xAmount * width * 10;
+	velTexture[uint2(hitPosX, hitPosY)] += newVelocity;
 }

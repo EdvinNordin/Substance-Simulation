@@ -9,8 +9,6 @@
 #pragma kernel SetBoundsY
 #pragma kernel AddValue
 #pragma kernel AddVelocity
-#pragma kernel SelectChannel
-#pragma kernel CombineChannels
 
 // Simulation parameters
 #define dt 0.0005
@@ -37,7 +35,7 @@ RWTexture2D<float> Pressure;  // Pressure Texture
 Texture2D<float> PressurePrev;  // Previous Pressure Texture
 RWTexture2D<float> Divergence;  // Divergence Texture
 
-[numthreads(20, 20, 1)]
+[numthreads(8, 8, 1)]
 void Advection(uint2 id : SV_DispatchThreadID)
 {
     float2 dt0 = dt * (float2(Width-2.0f, Height-2.0f));
@@ -56,7 +54,7 @@ void Advection(uint2 id : SV_DispatchThreadID)
 
 }
 
-[numthreads(20, 20, 1)]
+[numthreads(8, 8, 1)]
 void Diffusion(uint2 id : SV_DispatchThreadID)
 {
     float a = dt * spread * (Width - 2) * (Height - 2);
@@ -66,7 +64,7 @@ void Diffusion(uint2 id : SV_DispatchThreadID)
             Out[id + uint2(0, 1)] + Out[id + uint2(0, -1)])) / (1 + 4 * a);
 }
 
-[numthreads(20, 20, 1)]
+[numthreads(8, 8, 1)]
 void Projection(uint2 id : SV_DispatchThreadID) 
 {
     Divergence[uint2(id)] = -0.5f *
@@ -80,7 +78,7 @@ void Projection(uint2 id : SV_DispatchThreadID)
     
 }
 
-[numthreads(20, 20, 1)]
+[numthreads(8, 8, 1)]
 void Projection2(uint2 id : SV_DispatchThreadID) 
 {
     Pressure[id] = 
@@ -88,7 +86,7 @@ void Projection2(uint2 id : SV_DispatchThreadID)
                 PressurePrev[id + uint2(0, 1)] + PressurePrev[id + uint2(0, -1)])) / 4;
 }
 
-[numthreads(20, 20, 1)]
+[numthreads(8, 8, 1)]
 void Projection3(uint2 id : SV_DispatchThreadID) 
 {
     float2 newVelocity;
@@ -98,7 +96,7 @@ void Projection3(uint2 id : SV_DispatchThreadID)
 
 }
 
-[numthreads(40, 1, 1)]
+[numthreads(16, 1, 1)]
 void SetBoundsX(uint id : SV_DispatchThreadID)
 {
     if (id.x < Width/2){
@@ -109,7 +107,7 @@ void SetBoundsX(uint id : SV_DispatchThreadID)
     }
 }
 
-[numthreads(40, 1, 1)]
+[numthreads(16, 1, 1)]
 void SetBoundsY(uint id : SV_DispatchThreadID)
 {
     if (id.x < Height/2){
@@ -123,7 +121,7 @@ void SetBoundsY(uint id : SV_DispatchThreadID)
 [numthreads(1, 1, 1)]
 void AddValue(uint2 id : SV_DispatchThreadID)
 {
-	Out[uint2(hitPosX, hitPosY)] += 10.0f;
+	Out[uint2(hitPosX, hitPosY)] += 3.0f;
 }
 
 
@@ -133,20 +131,5 @@ void AddVelocity(uint2 id : SV_DispatchThreadID)
     float2 newVelocity;
     newVelocity.y = yAmount * Height;
     newVelocity.x = xAmount * Width;
-	Velocity[uint2(hitPosX, hitPosY)] += newVelocity;//float2(xAmount, yAmount)*(Width*Height)/2.0f;
-}
-
-[numthreads(20, 20, 1)]
-void SelectChannel (uint2 id : SV_DispatchThreadID)
-{
-    float2 sourcePixel = Velocity[id];
-    Out[id] = sourcePixel[Channel];
-}
-
-[numthreads(20, 20, 1)]
-void CombineChannels (uint2 id : SV_DispatchThreadID)
-{
-    float sourcePixel1 = In[id];
-    float sourcePixel2 = In[id];
-    Out[id] = float2(sourcePixel1, sourcePixel2);
+	Velocity[uint2(hitPosX, hitPosY)] += newVelocity;
 }

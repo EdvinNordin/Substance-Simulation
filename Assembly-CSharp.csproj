@@ -44,6 +44,7 @@
      <Compile Include="Assets\CPU\NoConShallowWater.cs" />
      <Compile Include="Assets\CPU\ConSWE.cs" />
      <Compile Include="Assets\Testing\WaveEquation.cs" />
+     <Compile Include="Assets\GPU\LBM_GPU.cs" />
      <Compile Include="Assets\CPU\DebugMode.cs" />
      <Compile Include="Assets\CPU\LBM.cs" />
      <Compile Include="Assets\CPU\NavierStokes.cs" />
@@ -54,6 +55,7 @@
      <None Include="Assets\GPU\NS_GPU.compute" />
      <None Include="Assets\GPU\UpdateVertices.shader" />
      <None Include="Assets\GPU\WaveEquation.compute" />
+     <None Include="Assets\GPU\LBM_GPU.compute" />
      <None Include="Assets\Testing\StableFluids2D.compute" />
     <Reference Include="UnityEngine">
         <HintPath>A:\Programs\2022.3.9f1\Editor\Data\Managed\UnityEngine\UnityEngine.dll</HintPath>
