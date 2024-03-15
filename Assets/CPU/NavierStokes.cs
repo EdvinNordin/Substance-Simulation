@@ -102,11 +102,11 @@ public class NavierStokes : MonoBehaviour
                     int vertexHit = GetClosestVertex(hit, triangles);
                     int a = vertexHit / nx;
                     int b = vertexHit % nx;
-                    Vx[a+1, b] += 5.5f;
-                    Vx[a-1, b] += -5.5f;
-                    Vy[a, b+1] += 5.5f;
-                    Vy[a, b-1] += -5.5f;
-                    density[a, b] += 1.0f;
+                    //Vx0[a+1, b] += 5.5f;
+                    //Vx0[a-1, b] += -5.5f;
+                    //Vy0[a, b+1] += 5.5f;
+                    //Vy0[a, b-1] += -5.5f;
+                    density[a, b] += 3.0f;
                 }
             }
         }

@@ -7,6 +7,7 @@ Shader "UpdateVertices"
     }
     SubShader
     {
+        //Blend SrcAlpha OneMinusSrcAlpha
         Pass
         {
             CGPROGRAM
@@ -32,7 +33,7 @@ Shader "UpdateVertices"
             {
                 v2f o;
                 float4 worldPos = mul(unity_ObjectToWorld, v.vertex);
-                float displacement = tex2Dlod(importTexture, float4(v.uv, 0, 0)).r * 10.0f;
+                float displacement = tex2Dlod(importTexture, float4(v.uv, 0, 0)).r;
                 worldPos.y += displacement;
                 o.vertex = mul(UNITY_MATRIX_VP, worldPos);
                 o.uv = v.uv;
@@ -44,7 +45,8 @@ Shader "UpdateVertices"
                 float r = tex2D(importTexture, i.uv).r * (sin(_Time.w + 0.0) * 0.05 + 0.5);
                 float g = tex2D(importTexture, i.uv).r * (sin(_Time.w + 2.0) * 0.05 + 0.5);
                 float b = tex2D(importTexture, i.uv).r * (sin(_Time.w + 4.0) * 0.05 + 0.5);
-                fixed4 col = fixed4(r, g, b, 1);
+                float alpha = tex2D(importTexture, i.uv).r;
+                fixed4 col = fixed4(r, g, b, alpha);
                 return col;
             }
             ENDCG

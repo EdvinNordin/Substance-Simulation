@@ -1,8 +1,12 @@
 // Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel Density
 #pragma kernel Collision
 #pragma kernel Streaming
 #pragma kernel AddValue
 #pragma kernel AddVelocity
+#pragma kernel HandleBoundaries
+#pragma kernel Setup
+#pragma kernel Out
 
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
@@ -10,11 +14,12 @@ RWTexture3D<float> fTexture;
 RWTexture3D<float> fnewTexture;
 RWTexture3D<float> feqTexture;
 RWTexture2D<float> rhoTexture;
-RWTexture2D<float> inputRhoTexture;
+RWTexture2D<float> inRhoTexture;
 RWTexture2D<float2> velTexture;
 RWTexture2D<float> latticeTexture;
+RWTexture2D<float> outTexture;
 
-#define tau 0.6
+#define tau 1.50f
 
 float hitPosX;
 float hitPosY;
@@ -26,38 +31,54 @@ uint width;
 uint height;
 
 [numthreads(8, 8, 1)]
-void Collision(uint2 id : SV_DispatchThreadID)
+void Density(uint2 id : SV_DispatchThreadID)
 {
-    float rhoTmp = 0.0;
-    float mXTmp = 0.0;
-    float mYTmp = 0.0;
-    
+    float rhoTmp = 0.0f;
+    float mXTmp = 0.0f;
+    float mYTmp = 0.0f;
 
     for (int k = 0; k < 9; k++) 
     {
         rhoTmp += fTexture[uint3(id.x, id.y, k)];
-        mXTmp += fTexture[uint3(id.x, id.y, k)] * latticeTexture[uint2(k, 1)];    
-        mYTmp += fTexture[uint3(id.x, id.y, k)] * latticeTexture[uint2(k, 2)];
+        mXTmp += fTexture[uint3(id.x, id.y, k)] * latticeTexture[uint2(k, 0)];    
+        mYTmp += fTexture[uint3(id.x, id.y, k)] * latticeTexture[uint2(k, 1)];
     }
 
-    rhoTmp += inputRhoTexture[id];
-    inputRhoTexture[id] = 0.0;
+    rhoTmp += inRhoTexture[id];
 
-    rhoTexture[id] += rhoTmp;
-    
-    if (rhoTmp < 0.01) 
+    if (rhoTmp < 0.01f) 
+    {       
+        velTexture[id] = float2(mXTmp / 0.01f, mYTmp / 0.01f);
+    }
+    else
     {
-        rhoTmp = 0.01;
+        velTexture[id] = float2(mXTmp / rhoTmp, mYTmp / rhoTmp);
     }
+    
+    float distance = sqrt(velTexture[id].x * velTexture[id].x + velTexture[id].y * velTexture[id].y);
+                
 
-    velTexture[id] = float2(mXTmp / rhoTmp, mYTmp / rhoTmp);
-    //velTexture[id].y = mYTmp / rhoTmp;
+    if(distance > 1.0f)
+    {
+        velTexture[id] = float2(velTexture[id].x / (distance), velTexture[id].y / (distance));
+    }
+    velTexture[id] = float2(velTexture[id].x / 1.50f, velTexture[id].y / 1.50f);
+    rhoTexture[id] = rhoTmp;
+    inRhoTexture[id] = 0.0f;
+    //inRhoTexture[id] = latticeTexture[uint2(0,1)]*10.0f;
+}
 
+[numthreads(8, 8, 1)]
+void Collision(uint2 id : SV_DispatchThreadID)
+{
+    //lattice speed c=1
+    //soundspeed squared = 1/3
     for (int k = 0; k < 9; k++) 
     {
-        float vu = latticeTexture[uint2(k, 1)] * velTexture[id].x + latticeTexture[uint2(k, 2)] * velTexture[id].y;
+        float vu = latticeTexture[uint2(k, 0)] * velTexture[id].x + latticeTexture[uint2(k, 1)] * velTexture[id].y;
         float uu = velTexture[id].x * velTexture[id].x + velTexture[id].y * velTexture[id].y;
-        feqTexture[uint3(id.x, id.y, k)] = latticeTexture[uint2(k, 3)] * rhoTexture[id] * (1.0 + 3.0 * vu + 9.0 / 2.0 * vu * vu + 3.0 / 2.0 * uu);
+        
+        feqTexture[uint3(id.x, id.y, k)] = latticeTexture[uint2(k, 2)] * rhoTexture[id] * (1.0f + 3.0f * vu + (9.0f / 2.0f) * vu * vu + (3.0f / 2.0f) * uu);
         fnewTexture[uint3(id.x, id.y, k)] = fTexture[uint3(id.x, id.y, k)] - (fTexture[uint3(id.x, id.y, k)] - feqTexture[uint3(id.x, id.y, k)]) / tau;
     }
 }
@@ -67,49 +88,55 @@ void Streaming(uint2 id : SV_DispatchThreadID)
 {
     for (int k = 0; k < 9; k++) 
     {
-        int x_next = (id.x + latticeTexture[uint2(k, 1)]) % width;
-        int y_next = (id.y + latticeTexture[uint2(k, 2)] ) % height;
-        fTexture[uint3(x_next, y_next, k)] = fnewTexture[uint3(id.x, id.y, k)];
-    }/*
-        int nextX = id.x + latticeTexture[uint2(k, 1)];
-        int nextY = id.y + latticeTexture[uint2(k, 2)];
+        int nextX = (id.x + latticeTexture[uint2(k, 0)]);
+        int nextY = (id.y + latticeTexture[uint2(k, 1)]);
 
-        if (nextX < width && nextY < height && nextX >= 0 && nextY >= 0) 
+        if (nextX < width && nextY < height && nextX >= 0 && nextY >= 0)
         {
             fTexture[uint3(nextX, nextY, k)] = fnewTexture[uint3(id.x, id.y, k)];
         }
         else
         {
-            if((nextX < 0 || nextX >= width) && (nextY < 0 || nextY >= height))
-            {
-                int adjX1 = max(0, min(width - 1, nextX));
-                int adhY1 = id.y;
-                int adjX2 = id.x;
-                int adjY2 = max(0, min(height - 1, nextY));
-
-                fTexture[uint3(id.x, id.y, k)] = 0.5f * (fnewTexture[uint3(adjX1, id.y, k)]+ fnewTexture[uint3(id.x, adjY2, k)]);
-            }
-            else
-            {
-                fTexture[uint3(id.x, id.y, k)] = fnewTexture[uint3(id.x, id.y, k)]; 
-            }
+            fTexture[uint3(id.x,id.y,k)] = fnewTexture[uint3(id.x,id.y,k)];
         }
-    }*/
+    }
+}        
     
+[numthreads(8, 8, 1)]
+void HandleBoundaries(uint2 id : SV_DispatchThreadID)
+{
+    // Loop through all lattice directions
+    for (int k = 0; k < 9; ++k)
+    {
+        // Bounce-back boundary condition
+            //int oppositeDirection = (k + 4) % 8; // Assuming that opposite directions are 4 steps apart in the lattice
+            //fTexture[uint3(id.x, id.y, oppositeDirection)] = fnewTexture[uint3(id.x, id.y, k)];
+    }
 }
 
 [numthreads(1, 1, 1)]
 void AddValue(uint2 id : SV_DispatchThreadID)
 {
-	inputRhoTexture[uint2(hitPosX, hitPosY)] += 3.0f;
+	inRhoTexture[uint2(hitPosX, hitPosY)] += 10.0f;
 }
-
 
 [numthreads(1, 1, 1)]
 void AddVelocity(uint2 id : SV_DispatchThreadID)
 {
     float2 newVelocity;
-    newVelocity.y = yAmount * height * 10;
     newVelocity.x = xAmount * width * 10;
+    newVelocity.y = yAmount * height * 10;
 	velTexture[uint2(hitPosX, hitPosY)] += newVelocity;
+}
+
+[numthreads(8, 8, 1)]
+void Setup(uint2 id : SV_DispatchThreadID)
+{
+    rhoTexture[id] = 1.0f;
+}
+
+[numthreads(8, 8, 1)]
+void Out(uint2 id : SV_DispatchThreadID)
+{
+    outTexture[id] = rhoTexture[id]-1.0f;
 }

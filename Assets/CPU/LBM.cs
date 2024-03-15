@@ -5,8 +5,8 @@ using UnityEngine;
 public class LBM : MonoBehaviour
 {
 
-    private const int nx = 30;
-    private const int ny = 30;
+    private const int nx = 200;
+    private const int ny = 200;
     private const int q = 9;
 
     private float[,,] f = new float[nx, ny, q]; // Distribution functions
@@ -29,7 +29,7 @@ public class LBM : MonoBehaviour
     private int[] latticeDirY = { 0, 0, 1, 0, -1, 1, 1, -1, -1 };
     private float[] latticeWeight = { 4.0f / 9, 1.0f / 9, 1.0f / 9, 1.0f / 9, 1.0f / 9, 1.0f / 36, 1.0f / 36, 1.0f / 36, 1.0f / 36 };
 
-    private const float tau = 0.9f; //Relaxation time 0.5 to 2
+    private const float tau = 1.50f; //Relaxation time 0.5 to 2
 
     List<GameObject> pointObjects;
 
@@ -44,8 +44,7 @@ public class LBM : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-
-         pointObjects = new List<GameObject>();
+         /*pointObjects = new List<GameObject>();
 
         for (int i = 0; i < nx; i++)
         {
@@ -55,7 +54,7 @@ public class LBM : MonoBehaviour
                 pointObjects.Add(newPoint);
                 newPoint.name = "Point:" + i + "," + j;
             }
-        }
+        }*/
 
         prevX = 0.0f;
         prevY = 0.0f;
@@ -66,8 +65,8 @@ public class LBM : MonoBehaviour
             {
                 velX[i, j] = 0.0f;
                 velY[i, j] = 0.0f;
-                rho[i, j] = 1.0f;
-                inputRho[i, j] = 0.0f;
+                rho[i, j] = 0.0f;
+                inputRho[i, j] = 1.0f;
                 inputVelX[i, j] = 0.0f;
                 inputVelY[i, j] = 0.0f;
 
@@ -90,7 +89,7 @@ public class LBM : MonoBehaviour
             for (int j = 0; j < ny; j++)
             {
 
-                float rhoTmp = 0;
+                float rhoTmp = 1;
                 float mXTmp = 0;
                 float mYTmp = 0;
 
@@ -101,8 +100,6 @@ public class LBM : MonoBehaviour
                     mYTmp += f[i, j, k] * latticeDirY[k];
                 }
 
-                rhoTmp += inputRho[i,j];
-                inputRho[i,j] = 0.0f;
 
                 if(rhoTmp < 0.1f)
                 {
@@ -110,15 +107,25 @@ public class LBM : MonoBehaviour
                 }
 
                 //velocity = momentum / rho(density)
-                rho[i, j] = rhoTmp;
+                rho[i, j] = rhoTmp+inputRho[i,j];
                 velX[i, j] = mXTmp / rhoTmp;// + inputVelX[i,j];
                 velY[i, j] = mYTmp / rhoTmp;// + inputVelY[i,j];
+
+                inputRho[i,j] = 0.0f;
+                float distance = Mathf.Sqrt(velX[i, j] * velX[i, j] + velY[i, j] * velY[i, j]);
                 
 
+                if(distance > 1.0f){
+                   
+                    velX[i, j] = velX[i, j] / distance;
+                    velY[i, j] = velY[i, j] / distance;               
+
+                }
                 for (int k = 0; k < q; k++)
                 {
                     float vu = latticeDirX[k] * velX[i, j] + latticeDirY[k] * velY[i, j];
                     float uu = velX[i, j] * velX[i, j] + velY[i, j] * velY[i, j];
+
                     feq[i, j, k] = latticeWeight[k] * rho[i, j] * (1 + 3 * vu + 9 / 2 * vu * vu + 3 / 2 * uu);
                     fnew[i, j, k] = f[i, j, k] -(f[i, j, k] - feq[i, j, k]) / tau;
                 }
@@ -126,25 +133,18 @@ public class LBM : MonoBehaviour
             }
         }
 
-        //streaming step
+
+        // Streaming step
         for (int i = 0; i < nx; i++)
         {
             for (int j = 0; j < ny; j++)
             {
                 for (int k = 0; k < q; k++)
                 {
-                    /*
-                    if(i + latticeDirX[k] >= 0 && i + latticeDirX[k] < nx && j + latticeDirY[k] >= 0 && j + latticeDirY[k] < ny){
+                    int nextX = i + latticeDirX[k];
+                    int nextY = j + latticeDirY[k];
 
-                            
-                        int nextX = (int)(i + latticeDirX[k]);
-                        int nextY = (int)(j + latticeDirY[k]);
-                        f[nextX, nextY, k] = fnew[i, j, k];
-                    }*/
-                    int nextX = (int)(i + latticeDirX[k]);
-                    int nextY = (int)(j + latticeDirY[k]);
-
-                    // Check if the next cell is inside the domain
+                    // If the next cell is inside the domain, move the particle to the next cell
                     if(nextX >= 0 && nextX < nx && nextY >= 0 && nextY < ny)
                     {
                         f[nextX, nextY, k] = fnew[i, j, k];
@@ -152,28 +152,16 @@ public class LBM : MonoBehaviour
                     // If the next cell is outside the domain, apply the outflow boundary condition
                     else
                     {
-                        // If the next cell is at a corner, average the distribution functions from the two adjacent cells
-                        if((nextX < 0 || nextX >= nx) && (nextY < 0 || nextY >= ny))
-                        {
-                            int adjX1 = Mathf.Max(0, Mathf.Min(nx - 1, nextX));
-                            int adjY1 = j;
-                            int adjX2 = i;
-                            int adjY2 = Mathf.Max(0, Mathf.Min(ny - 1, nextY));
-                            f[i, j, k] = 0.5f * (fnew[adjX1, adjY1, k] + fnew[adjX2, adjY2, k]);
-                        }
-                        else
-                        {
-                            f[i, j, k] = fnew[i, j, k];
-                        }
+                        f[i, j, k] = 0f;//fnew[i, j, k];
                     }
                 }
             }
         }
 
-        /*Mesh mesh = GetComponent<MeshFilter>().mesh;
+        Mesh mesh = GetComponent<MeshFilter>().mesh;
         Vector3[] vertices = mesh.vertices;
         int[] triangles = mesh.triangles;
-*/
+
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
         RaycastHit hit;
 
@@ -185,24 +173,23 @@ public class LBM : MonoBehaviour
                 MeshCollider meshCollider = hit.collider as MeshCollider;
                 if (meshCollider == null || meshCollider.sharedMesh == null)
                 {
-                    Debug.Log("nope");
 
                 }
                 else
                 {
 
-                    string name = hit.transform.gameObject.name;
-                    int pointHit = int.Parse(name.Substring(name.Length - 3, name.Length - 2));
-                    //int vertexHit = GetClosestVertex(hit, triangles);
+                    //string name = hit.transform.gameObject.name;
+                    //int pointHit = int.Parse(name.Substring(name.Length - 3, name.Length - 2));
+                    int vertexHit = GetClosestVertex(hit, triangles);
                     //pointObjects[0].transform.position = hit.point;
-                    int a = pointHit / nx;
-                    int b = pointHit % nx;
+                    int a = vertexHit / nx;
+                    int b = vertexHit % nx;
                     inputRho[a, b] += 1.0f;
                 }
             }
         }
 
-        if (Input.GetMouseButton(1))
+        /*if (Input.GetMouseButton(1))
         {
             if (Physics.Raycast(ray, out hit))
             {
@@ -219,14 +206,14 @@ public class LBM : MonoBehaviour
                 else
                 {
 
-                    /*int vertexHit = GetClosestVertex(hit, triangles);
+                    int vertexHit = GetClosestVertex(hit, triangles);
                     int a = vertexHit / nx;
                     int b = vertexHit % nx;
                     inputVelX[a, b] += 0.10f * (xPos - prevX);
-                    inputVelY[a, b] += 0.10f * (yPos - prevY);*/
+                    inputVelY[a, b] += 0.10f * (yPos - prevY);
                 }
             }
-        }
+        }*/
 
 
         for (var i = 0; i<nx*ny; i++)//vertices.Length; i++)
@@ -234,21 +221,22 @@ public class LBM : MonoBehaviour
             int a = i / nx;
             int b = i % nx;
             float temp = 0.0f;
-
-            for (int k = 0; k < q; k++)
-            {
-                temp += f[a, b, k];
-            }
-            pointObjects[i].transform.eulerAngles = new Vector3(0,getVelocity(a,b)*180f/3.14f,0);
+            
+            temp = rho[a, b];
+            
+            /*pointObjects[i].transform.eulerAngles = new Vector3(0,getVelocity(a,b)*180f/3.14f,0);
             
             Vector3 pos = pointObjects[i].transform.position;
             pointObjects[i].transform.position = new Vector3 (pos.x, temp, pos.z);
-            // = new Vector3(0, temp, 0);
-//            vertices[i].y = temp;
+            // = new Vector3(0, temp, 0);*/
+            vertices[i].y = temp;
         }
 
-        //mesh.vertices = vertices;
-        //mesh.RecalculateNormals();
+        //Debug.Log(CalculateReynoldsNumber(nx));
+        //Debug.Log(CalculateCFL());
+
+        mesh.vertices = vertices;
+        mesh.RecalculateNormals();
 
         prevX = xPos;
         prevY = yPos;
@@ -288,4 +276,68 @@ public class LBM : MonoBehaviour
 
         return dir;
     }
+    public float CalculateAverageVelocity()
+    {
+        float totalVelocity = 0.0f;
+        int count = 0;
+
+        for (int i = 0; i < nx; i++)
+        {
+            for (int j = 0; j < ny; j++)
+            {
+                float velocityMagnitude = Mathf.Sqrt(velX[i, j] * velX[i, j] + velY[i, j] * velY[i, j]);
+                totalVelocity += velocityMagnitude;
+                count++;
+            }
+        }
+
+        return totalVelocity / count;
+    }
+
+    public float CalculateReynoldsNumber(float characteristicLength)
+    {
+        float totalVelocity = 0.0f;
+        int count = 0;
+
+        for (int i = 0; i < nx; i++)
+        {
+            for (int j = 0; j < ny; j++)
+            {
+                float velocityMagnitude = Mathf.Sqrt(velX[i, j] * velX[i, j] + velY[i, j] * velY[i, j]);
+                totalVelocity += velocityMagnitude;
+                count++;
+            }
+        }
+        float characteristicVelocity = totalVelocity / count;
+
+        float nu = (2 * tau - 1) / 6.0f;
+        float reynoldsNumber = (characteristicVelocity * characteristicLength) / nu;
+        return reynoldsNumber;
+}
+
+public float CalculateCFL()
+{
+    float maxVelocity = 0.0f;
+
+    // Find the maximum velocity in the domain
+    for (int i = 0; i < nx; i++)
+    {
+        for (int j = 0; j < ny; j++)
+        {
+            float velocityMagnitude = Mathf.Sqrt(velX[i, j] * velX[i, j] + velY[i, j] * velY[i, j]);
+            if (velocityMagnitude > maxVelocity)
+            {
+                maxVelocity = velocityMagnitude;
+            }
+        }
+    }
+
+    float dt = 1.0f;
+
+    float dx = 1.0f;
+
+    float CFL = maxVelocity * dt / dx;
+
+    return CFL;
+}
 }
