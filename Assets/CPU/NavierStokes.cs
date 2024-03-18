@@ -6,8 +6,8 @@ public class NavierStokes : MonoBehaviour
 {
 
 
-    static int nx = 30; // Number of grid cells in the x-direction
-    static int ny = 30; // Number of grid cells in the y-direction
+    static int nx = 10; // Number of grid cells in the x-direction
+    static int ny = 10; // Number of grid cells in the y-direction
 
     public int iter = 1; //iterations of calculation of the whole thing?
     //int size;
@@ -30,10 +30,33 @@ public class NavierStokes : MonoBehaviour
 
     float prevX;
     float prevY;
+    public bool debug;
+    List<GameObject> pointObjects;
+    public GameObject prefab;
 
     // Start is called before the first frame update
     void Start()
     {
+        pointObjects = new List<GameObject>();
+
+        if (debug)
+        {
+            //pointObjects.Add(Instantiate(prefab, new Vector3(1 / 2, 0, 1 / 2), Quaternion.identity));
+
+            
+            for (int i = 0; i < nx; i++)
+            {
+                for (int j = 0; j < ny; j++)
+                {
+                    //Debug.Log(i + " " + j);
+                    var obj = Instantiate(prefab, new Vector3(i, 0, j), Quaternion.identity);
+                    pointObjects.Add(obj);
+                }
+            }
+            /*prefab.GetComponent<SpriteRenderer>().enabled = false;
+            prefab.transform.GetChild(0).GetComponent<SpriteRenderer>().enabled = true;*/
+        }
+
         prevX = 0.0f;
         prevY = 0.0f;
 
@@ -63,6 +86,7 @@ public class NavierStokes : MonoBehaviour
         }
     }
 
+
     // Update is called once per frame
     void Update()
     {
@@ -78,59 +102,63 @@ public class NavierStokes : MonoBehaviour
             }
         }*/
 
-        Mesh mesh = GetComponent<MeshFilter>().mesh;
-        Vector3[] vertices = mesh.vertices;
-        int[] triangles = mesh.triangles;
+        if(!debug){
 
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        RaycastHit hit;
+            
+            Mesh mesh = GetComponent<MeshFilter>().mesh;
+            Vector3[] vertices = mesh.vertices;
+            int[] triangles = mesh.triangles;
 
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            RaycastHit hit;
 
-        if (Input.GetMouseButton(0))
-        {
-            if (Physics.Raycast(ray, out hit))
+            Debug.Log(triangles.Length);
+            if (Input.GetMouseButton(0))
             {
-                //Debug.Log(GetClosestVertex(hit, triangles));
-                MeshCollider meshCollider = hit.collider as MeshCollider;
-                if (meshCollider == null || meshCollider.sharedMesh == null)
+                if (Physics.Raycast(ray, out hit))
                 {
+                    //Debug.Log(GetClosestVertex(hit, triangles));
+                    MeshCollider meshCollider = hit.collider as MeshCollider;
+                    if (meshCollider == null || meshCollider.sharedMesh == null)
+                    {
 
-                }
-                else
-                {
+                    }
+                    else
+                    {
 
-                    int vertexHit = GetClosestVertex(hit, triangles);
-                    int a = vertexHit / nx;
-                    int b = vertexHit % nx;
-                    //Vx0[a+1, b] += 5.5f;
-                    //Vx0[a-1, b] += -5.5f;
-                    //Vy0[a, b+1] += 5.5f;
-                    //Vy0[a, b-1] += -5.5f;
-                    density[a, b] += 3.0f;
+                        int vertexHit = GetClosestVertex(hit, triangles);
+                        int a = vertexHit / nx;
+                        int b = vertexHit % nx;
+                        density[a, b] += 3.0f;
+                    }
                 }
             }
-        }
 
-        if (Input.GetMouseButton(1))
-        {
-            if (Physics.Raycast(ray, out hit))
+            if (Input.GetMouseButton(1))
             {
-                xPos = hit.point.x;
-                yPos = hit.point.y;
-                //Debug.Log(GetClosestVertex(hit, triangles));
-                MeshCollider meshCollider = hit.collider as MeshCollider;
-                
-                if (meshCollider == null || meshCollider.sharedMesh == null)
+                if (Physics.Raycast(ray, out hit))
                 {
-                }
-                else
-                {
+                    xPos = hit.point.x;
+                    yPos = hit.point.y;
+                    //Debug.Log(GetClosestVertex(hit, triangles));
+                    MeshCollider meshCollider = hit.collider as MeshCollider;
+                    
+                    if (meshCollider == null || meshCollider.sharedMesh == null)
+                    {
+                    }
+                    else
+                    {
 
-                    int vertexHit = GetClosestVertex(hit, triangles);
-                    int a = vertexHit / nx;
-                    int b = vertexHit % nx;
-                    Vx[a, b] += 1.0f*(xPos - prevX);
-                    Vy[a, b] += 1.0f*(yPos - prevY);
+                        int vertexHit = GetClosestVertex(hit, triangles);
+                        int a = vertexHit / nx;
+                        int b = vertexHit % nx;
+                        for(int i = -1; i < 1; i++){
+                            for(int j = -1; j < 1; j++){
+                                Vx[a + i, b + j] += 1.0f*(xPos - prevX);
+                                Vy[a + i, b + j] += 1.0f*(yPos - prevY);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -161,17 +189,24 @@ public class NavierStokes : MonoBehaviour
 
 
 
-
-        for (var i = 0; i < vertices.Length; i++)
+        Vector3 Pos;
+        for (var i = 0; i < nx; i++)
         {
+            for (var j = 0; j < ny; j++)
+            {
+                Pos = pointObjects[j + i * nx].transform.position;
+                pointObjects[j + i * nx].transform.position = new Vector3(Pos.x, Pos.y, density[i, j]);
+            }
+            
+   
+        }
+        /*
             int a = i / nx;
             int b = i % nx;
-            float height = source[a, b]*1.0f;
-            vertices[i].y = height;
-        }
-
+            vertices[i].y = source[a, b];
         mesh.vertices = vertices;
-        mesh.RecalculateNormals();
+        mesh.RecalculateNormals();*/
+        
     }
 
 
@@ -376,4 +411,5 @@ public class NavierStokes : MonoBehaviour
         else
             return aTriangles[index + 2]; // z
     }
+
 }

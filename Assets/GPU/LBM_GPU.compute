@@ -86,31 +86,88 @@ void Collision(uint2 id : SV_DispatchThreadID)
 [numthreads(8, 8, 1)]
 void Streaming(uint2 id : SV_DispatchThreadID)
 {
-    for (int k = 0; k < 9; k++) 
+    for (int k = 0; k < 9; ++k)
     {
         int nextX = (id.x + latticeTexture[uint2(k, 0)]);
         int nextY = (id.y + latticeTexture[uint2(k, 1)]);
 
-        if (nextX < width && nextY < height && nextX >= 0 && nextY >= 0)
+        
+        if(id.x == 0)
         {
-            fTexture[uint3(nextX, nextY, k)] = fnewTexture[uint3(id.x, id.y, k)];
+            if (nextX < 0)
+            {
+                fTexture[uint3(id.x, id.y, k)] = fnewTexture[uint3(id.x, id.y, k+2)];
+            }
+        }   
+        else if(id.x == width-1)
+        {
+            if (nextX >= width)
+            {
+                fTexture[uint3(id.x, id.y, k)] = fnewTexture[uint3(id.x, id.y, -2)];
+            }
+        }
+        else if(id.y == 0)
+        {
+            if (nextY < 0)
+            {
+                fTexture[uint3(id.x, id.y, k)] = fnewTexture[uint3(id.x, id.y, k+6)];
+            }
+        }
+        else if(id.y == height-1)
+        {
+            if (nextY >= height)
+            {
+                fTexture[uint3(id.x, id.y, k)] = fnewTexture[uint3(id.x, id.y, k-6)];
+            }
         }
         else
         {
-            fTexture[uint3(id.x,id.y,k)] = fnewTexture[uint3(id.x,id.y,k)];
+            fTexture[uint3(nextX, nextY, k)] = fnewTexture[uint3(id.x, id.y, k)];
         }
     }
 }        
-    
+//NW N NE E SE S SW W C 
 [numthreads(8, 8, 1)]
 void HandleBoundaries(uint2 id : SV_DispatchThreadID)
 {
-    // Loop through all lattice directions
     for (int k = 0; k < 9; ++k)
     {
-        // Bounce-back boundary condition
-            //int oppositeDirection = (k + 4) % 8; // Assuming that opposite directions are 4 steps apart in the lattice
-            //fTexture[uint3(id.x, id.y, oppositeDirection)] = fnewTexture[uint3(id.x, id.y, k)];
+        int nextX = (id.x + latticeTexture[uint2(k, 0)]);
+        int nextY = (id.y + latticeTexture[uint2(k, 1)]);
+
+        
+        if(id.x == 0)
+        {
+            if (nextX < 0)
+            {
+                fTexture[uint3(id.x, id.y, k)] = fnewTexture[uint3(id.x, id.y, k+2)];
+            }
+        }   
+        else if(id.x == width-1)
+        {
+            if (nextX >= width)
+            {
+                fTexture[uint3(id.x, id.y, k)] = fnewTexture[uint3(id.x, id.y, -2)];
+            }
+        }
+        else if(id.y == 0)
+        {
+            if (nextY < 0)
+            {
+                fTexture[uint3(id.x, id.y, k)] = fnewTexture[uint3(id.x, id.y, k+6)];
+            }
+        }
+        else if(id.y == height-1)
+        {
+            if (nextY >= height)
+            {
+                fTexture[uint3(id.x, id.y, k)] = fnewTexture[uint3(id.x, id.y, k-6)];
+            }
+        }
+        else
+        {
+            fTexture[uint3(nextX, nextY, k)] = fnewTexture[uint3(id.x, id.y, k)];
+        }
     }
 }
 

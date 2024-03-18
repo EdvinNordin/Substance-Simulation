@@ -28,14 +28,15 @@ public class LBM_GPU : MonoBehaviour
     private RenderTexture latticeTexture;
     private RenderTexture outTexture;
 
-    /*float[] lattice = { 0.0f, 1.0f, 0.0f, -1.0f, 0.0f, 1.0f, -1.0f, -1.0f, 1.0f,  
-                        0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f,  
-                        4.0f / 9.0f, 1.0f / 9.0f, 1.0f / 9.0f, 1.0f / 9.0f, 1.0f / 9.0f, 1.0f / 36.0f, 1.0f / 36.0f, 1.0f / 36.0f, 1.0f / 36.0f };
-                        */
+    float[] lattice = { -1.0f, 0.0f, 1.0f, -1.0f, 0.0f, 1.0f, -1.0f, 0.0f, 1.0f,  
+                        1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f, -1.0f, -1.0f,  
+                        1.0f / 36.0f, 1.0f / 9.0f, 1.0f / 36.0f, 1.0f / 9.0f, 4.0f / 9.0f, 1.0f / 9.0f, 1.0f / 36.0f, 1.0f / 9.0f, 1.0f / 36.0f };
+                        
 //NW N NE E SE S SW W C 
-    float[] lattice = { -1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, -1.0f, -1.0f, 0.0f,  
+    /*float[] lattice = { -1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, -1.0f, -1.0f, 0.0f,  
                         1.0f, 1.0f, 1.0f, 0.0f, -1.0f, -1.0f, -1.0f, 0.0f, 0.0f,  
                         1.0f / 36.0f, 1.0f / 9.0f, 1.0f / 36.0f, 1.0f / 9.0f, 1.0f / 36.0f, 1.0f / 9.0f, 1.0f / 36.0f, 1.0f / 9.0f, 4.0f / 9.0f };
+    */
     Texture2D latticeTemp;
 
     Vector2 mousePosition;
@@ -159,7 +160,7 @@ public class LBM_GPU : MonoBehaviour
         LBMShader.SetTexture(streamingKernel, "latticeTexture", latticeTexture);
         LBMShader.Dispatch(streamingKernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
 
-        LBMShader.SetTexture(boundaryKernel, "fTexture", fTexture);
+        /*LBMShader.SetTexture(boundaryKernel, "fTexture", fTexture);
         LBMShader.SetTexture(boundaryKernel, "fnewTexture", fnewTexture);
         LBMShader.Dispatch(boundaryKernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
 
