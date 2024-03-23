@@ -1,37 +1,57 @@
 // Each #kernel tells which function to compile; you can have many kernels
-#pragma kernel CSMain
-#pragma enable_d3d11_debug_symbols
+#pragma kernel WaveEquation
+#pragma kernel AddValue
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
 
+RWTexture2D<float> heightTexture;
+RWTexture2D<float> velTexture;
+RWTexture2D<float> accTexture;
 
-RWStructuredBuffer<float> heightBuffer;
-RWStructuredBuffer<float> velBuffer;
-RWStructuredBuffer<float> accBuffer;
+int width;
+int height;
 
+int hitPosX;
+int hitPosY;
+
+float c;
+float dt;
 
 [numthreads(10,10,1)]
-void CSMain (uint3 id : SV_DispatchThreadID)
-{
-    float dt = 0.01f;
-    float width = 20.0f;
-    
-    if (id.x > 0 && id.x < width - 1 && id.y > 0 && id.y < width - 1)
+void WaveEquation (int2 id : SV_DispatchThreadID)
+{   
+    if (id.x == 0)
     {
-        accBuffer[id.x + id.y * width] = heightBuffer[(id.x - 1) + id.y * width] + heightBuffer[(id.x + 1) + id.y * width] + heightBuffer[id.x + (id.y + 1) * width] + heightBuffer[id.x + (id.y - 1) * width] - 4.0f * heightBuffer[id.x + id.y * width];
-        velBuffer[id.x + id.y * width] = velBuffer[id.x + id.y * width] + dt * accBuffer[id.x + id.y * width];
-        heightBuffer[id.x + id.y * width] = heightBuffer[id.x + id.y * width] + dt * velBuffer[id.x + id.y * width];
-        
+        velTexture[id] = -velTexture[id];
+        heightTexture[id] = 1.0f;
+    }
+    else if (id.x == width - 1)
+    {
+        velTexture[id] = -velTexture[id];
+        heightTexture[id] = 2.0f;
+    }
+    else if (id.y == 0)
+    {
+        velTexture[id] = -velTexture[id];
+        heightTexture[id] = 3.0f;
+    }
+    else if (id.y == height - 1)
+    {
+        velTexture[id] = -velTexture[id];
+        heightTexture[id] = 4.0f;
     }
     else
     {
-        heightBuffer[id.x + id.y * width] = 0.0f;
-
+        accTexture[id] = c * c * (heightTexture[int2(id.x - 1, id.y)] + heightTexture[int2(id.x + 1, id.y)] + heightTexture[int2(id.x, id.y + 1)] + 
+                        heightTexture[int2(id.x, id.y - 1)] - 4.0f * heightTexture[id]);
+        velTexture[id] = velTexture[id] + dt * accTexture[id];
+        heightTexture[id] = heightTexture[id] + dt * velTexture[id];
+        heightTexture[id] = 0.1f;
     }
-
 }
 
-    // TODO: insert actual code here!
-    /*a[id.xy] = (h[id.x - 1, id.y] + h[id.x + 1, id.y] + h[id.x, id.y - 1] + h[id.x, id.y + 1] - (4.0f * h[id.xy]));
-    v[id.xy] = v[id.xy] + 0.001f * a[id.xy];
-    h[id.xy] = h[id.xy] + 0.001f * v[id.xy];*/
+[numthreads(1, 1, 1)]
+void AddValue(int2 id : SV_DispatchThreadID)
+{
+	heightTexture[int2(hitPosX, hitPosY)] += 0.1f;
+}

@@ -4,7 +4,6 @@
 #pragma kernel Streaming
 #pragma kernel AddValue
 #pragma kernel AddVelocity
-#pragma kernel HandleBoundaries
 #pragma kernel Setup
 #pragma kernel Out
 
@@ -16,10 +15,13 @@ RWTexture3D<float> feqTexture;
 RWTexture2D<float> rhoTexture;
 RWTexture2D<float> inRhoTexture;
 RWTexture2D<float2> velTexture;
+RWTexture2D<float2> tempVelTexture;
 RWTexture2D<float> latticeTexture;
 RWTexture2D<float> outTexture;
 
-#define tau 1.50f
+#define cc 1.0f
+
+float time;
 
 float hitPosX;
 float hitPosY;
@@ -27,173 +29,141 @@ float hitPosY;
 float xAmount;
 float yAmount;
 
-uint width;
-uint height;
+int width;
+int height;
+float tau;
 
 [numthreads(8, 8, 1)]
-void Density(uint2 id : SV_DispatchThreadID)
+void Density(int2 id : SV_DispatchThreadID)
 {
     float rhoTmp = 0.0f;
     float mXTmp = 0.0f;
     float mYTmp = 0.0f;
 
+
     for (int k = 0; k < 9; k++) 
     {
-        rhoTmp += fTexture[uint3(id.x, id.y, k)];
-        mXTmp += fTexture[uint3(id.x, id.y, k)] * latticeTexture[uint2(k, 0)];    
-        mYTmp += fTexture[uint3(id.x, id.y, k)] * latticeTexture[uint2(k, 1)];
+        rhoTmp += fTexture[int3(id.x, id.y, k)];
+        mXTmp += fTexture[int3(id.x, id.y, k)] * latticeTexture[int2(k, 0)];    
+        mYTmp += fTexture[int3(id.x, id.y, k)] * latticeTexture[int2(k, 1)];
     }
 
     rhoTmp += inRhoTexture[id];
 
-    if (rhoTmp < 0.01f) 
-    {       
+    if (rhoTmp < 0.01f) {
         velTexture[id] = float2(mXTmp / 0.01f, mYTmp / 0.01f);
     }
-    else
-    {
+    else {
         velTexture[id] = float2(mXTmp / rhoTmp, mYTmp / rhoTmp);
     }
     
-    float distance = sqrt(velTexture[id].x * velTexture[id].x + velTexture[id].y * velTexture[id].y);
-                
+    velTexture[id] += tempVelTexture[id];
 
-    if(distance > 1.0f)
-    {
-        velTexture[id] = float2(velTexture[id].x / (distance), velTexture[id].y / (distance));
-    }
-    velTexture[id] = float2(velTexture[id].x / 1.50f, velTexture[id].y / 1.50f);
+    //float max_velocity_magnitude = 5.0f;
+     velTexture[id] = float2(velTexture[id].x / 5.50f, velTexture[id].y / 5.50f);
+    float velocityMagnitude  = sqrt(velTexture[id].x * velTexture[id].x + velTexture[id].y * velTexture[id].y);
+    //if(velocityMagnitude > max_velocity_magnitude)
+    //{
+     //   velTexture[id] *= float2(max_velocity_magnitude / (velocityMagnitude), max_velocity_magnitude / (velocityMagnitude));
+    //}
+     //velTexture[id] = clamp(velTexture[id], -1.0, 1.0);
+
+
+    //velTexture[id] = float2(velTexture[id].x / 1.50f, velTexture[id].y / 1.50f);
     rhoTexture[id] = rhoTmp;
     inRhoTexture[id] = 0.0f;
-    //inRhoTexture[id] = latticeTexture[uint2(0,1)]*10.0f;
+
+    if(velocityMagnitude/sqrt(cc)>0.4){
+        rhoTexture[id] = -10.0f;
+    };
 }
 
 [numthreads(8, 8, 1)]
-void Collision(uint2 id : SV_DispatchThreadID)
+void Collision(int2 id : SV_DispatchThreadID)
 {
     //lattice speed c=1
     //soundspeed squared = 1/3
     for (int k = 0; k < 9; k++) 
     {
-        float vu = latticeTexture[uint2(k, 0)] * velTexture[id].x + latticeTexture[uint2(k, 1)] * velTexture[id].y;
+        float vu = latticeTexture[int2(k, 0)] * velTexture[id].x + latticeTexture[int2(k, 1)] * velTexture[id].y;
         float uu = velTexture[id].x * velTexture[id].x + velTexture[id].y * velTexture[id].y;
-        
-        feqTexture[uint3(id.x, id.y, k)] = latticeTexture[uint2(k, 2)] * rhoTexture[id] * (1.0f + 3.0f * vu + (9.0f / 2.0f) * vu * vu + (3.0f / 2.0f) * uu);
-        fnewTexture[uint3(id.x, id.y, k)] = fTexture[uint3(id.x, id.y, k)] - (fTexture[uint3(id.x, id.y, k)] - feqTexture[uint3(id.x, id.y, k)]) / tau;
+
+        //feqTexture[int3(id.x, id.y, k)] = latticeTexture[int2(k, 2)] * rhoTexture[id] * 1.0f * uu / cc + 0.5 * (uu / cc) * (uu / cc) + - vu / (2.0f * cc);
+        feqTexture[int3(id.x, id.y, k)] = latticeTexture[int2(k, 2)] * rhoTexture[id] * (1.0f + 3.0f * (vu / cc) + (9.0f / 2.0f) * (vu / cc) * (vu / cc) + (3.0f / 2.0f) * (uu / cc))
+        ;//+ 0.001 * sin(((8.24f/500)*id.x + (8.24f/500)*id.y) - time);
+        fnewTexture[int3(id.x, id.y, k)] = fTexture[int3(id.x, id.y, k)] - (fTexture[int3(id.x, id.y, k)] - feqTexture[int3(id.x, id.y, k)]) / tau;
+        fnewTexture[int3(id.x, id.y, k)] = clamp(fnewTexture[int3(id.x, id.y, k)], 0.0f, 1.0f);
     }
 }
 
 [numthreads(8, 8, 1)]
-void Streaming(uint2 id : SV_DispatchThreadID)
+void Streaming(int2 id : SV_DispatchThreadID)
 {
     for (int k = 0; k < 9; ++k)
     {
-        int nextX = (id.x + latticeTexture[uint2(k, 0)]);
-        int nextY = (id.y + latticeTexture[uint2(k, 1)]);
+        int nextX = (id.x + latticeTexture[int2(k, 0)]);
+        int nextY = (id.y + latticeTexture[int2(k, 1)]);
 
         
         if(id.x == 0)
         {
             if (nextX < 0)
             {
-                fTexture[uint3(id.x, id.y, k)] = fnewTexture[uint3(id.x, id.y, k+2)];
+                fTexture[int3(id.x, id.y, k)] = fnewTexture[int3(id.x, id.y, k+2)];
             }
         }   
         else if(id.x == width-1)
         {
             if (nextX >= width)
             {
-                fTexture[uint3(id.x, id.y, k)] = fnewTexture[uint3(id.x, id.y, -2)];
+                fTexture[int3(id.x, id.y, k)] = fnewTexture[int3(id.x, id.y, -2)];
             }
         }
         else if(id.y == 0)
         {
             if (nextY < 0)
             {
-                fTexture[uint3(id.x, id.y, k)] = fnewTexture[uint3(id.x, id.y, k+6)];
+                fTexture[int3(id.x, id.y, k)] = fnewTexture[int3(id.x, id.y, k+6)];
             }
         }
         else if(id.y == height-1)
         {
             if (nextY >= height)
             {
-                fTexture[uint3(id.x, id.y, k)] = fnewTexture[uint3(id.x, id.y, k-6)];
+                fTexture[int3(id.x, id.y, k)] = fnewTexture[int3(id.x, id.y, k-6)];
             }
         }
         else
         {
-            fTexture[uint3(nextX, nextY, k)] = fnewTexture[uint3(id.x, id.y, k)];
+            fTexture[int3(nextX, nextY, k)] = fnewTexture[int3(id.x, id.y, k)];
         }
     }
 }        
 //NW N NE E SE S SW W C 
-[numthreads(8, 8, 1)]
-void HandleBoundaries(uint2 id : SV_DispatchThreadID)
-{
-    for (int k = 0; k < 9; ++k)
-    {
-        int nextX = (id.x + latticeTexture[uint2(k, 0)]);
-        int nextY = (id.y + latticeTexture[uint2(k, 1)]);
-
-        
-        if(id.x == 0)
-        {
-            if (nextX < 0)
-            {
-                fTexture[uint3(id.x, id.y, k)] = fnewTexture[uint3(id.x, id.y, k+2)];
-            }
-        }   
-        else if(id.x == width-1)
-        {
-            if (nextX >= width)
-            {
-                fTexture[uint3(id.x, id.y, k)] = fnewTexture[uint3(id.x, id.y, -2)];
-            }
-        }
-        else if(id.y == 0)
-        {
-            if (nextY < 0)
-            {
-                fTexture[uint3(id.x, id.y, k)] = fnewTexture[uint3(id.x, id.y, k+6)];
-            }
-        }
-        else if(id.y == height-1)
-        {
-            if (nextY >= height)
-            {
-                fTexture[uint3(id.x, id.y, k)] = fnewTexture[uint3(id.x, id.y, k-6)];
-            }
-        }
-        else
-        {
-            fTexture[uint3(nextX, nextY, k)] = fnewTexture[uint3(id.x, id.y, k)];
-        }
-    }
-}
 
 [numthreads(1, 1, 1)]
-void AddValue(uint2 id : SV_DispatchThreadID)
+void AddValue(int2 id : SV_DispatchThreadID)
 {
-	inRhoTexture[uint2(hitPosX, hitPosY)] += 10.0f;
+	inRhoTexture[int2(hitPosX+id.x-2, hitPosY+id.y-2)] += 1.0f;
 }
 
-[numthreads(1, 1, 1)]
-void AddVelocity(uint2 id : SV_DispatchThreadID)
+[numthreads(4, 4, 1)]
+void AddVelocity(int2 id : SV_DispatchThreadID)
 {
     float2 newVelocity;
-    newVelocity.x = xAmount * width * 10;
-    newVelocity.y = yAmount * height * 10;
-	velTexture[uint2(hitPosX, hitPosY)] += newVelocity;
+    newVelocity.x = xAmount/1000.0f;
+    newVelocity.y = yAmount/1000.0f;
+	tempVelTexture[int2(hitPosX+id.x-2, hitPosY+id.y-2)] += newVelocity;
 }
 
 [numthreads(8, 8, 1)]
-void Setup(uint2 id : SV_DispatchThreadID)
+void Setup(int2 id : SV_DispatchThreadID)
 {
-    rhoTexture[id] = 1.0f;
+    rhoTexture[id] = 3.0f;
 }
 
 [numthreads(8, 8, 1)]
-void Out(uint2 id : SV_DispatchThreadID)
+void Out(int2 id : SV_DispatchThreadID)
 {
     outTexture[id] = rhoTexture[id]-1.0f;
 }

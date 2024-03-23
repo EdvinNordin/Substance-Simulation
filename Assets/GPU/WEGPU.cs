@@ -6,23 +6,25 @@ public class WEGPU : MonoBehaviour
 {
     public ComputeShader computeShader;
 
-    public ComputeBuffer heightBuffer;
-    public ComputeBuffer velBuffer;
-    public ComputeBuffer accBuffer;
+    private RenderTexture heightTexture;
+    private RenderTexture velTexture;
+    private RenderTexture accTexture;
 
-    private int kernelHandle;
+    public Shader updateVerticesShader;
+    public float dt = 0.01f;
+    public float c = 10.0f;
+    private int WaveEquationKernel;
+    private int AddValueKernel;
 
-    // Simulation parameters
-    static int nx = 20; // Number of grid cells in the x-direction
-    static int ny = 20; // Number of grid cells in the y-direction
-    float[] h;
-    float[] a;
-    float[] v;
+    int planeWidth;
+    int planeHeight;
+    Vector2Int resolution;
+    Vector3Int threadGroupAmount;
 
     // Start is called before the first frame update
     void Start()
     {
-        h = new float[nx*ny];
+        /*h = new float[nx*ny];
         v = new float[nx*ny];
         a = new float[nx*ny];
 
@@ -47,43 +49,106 @@ public class WEGPU : MonoBehaviour
 
         heightBuffer.SetData(h);
         velBuffer.SetData(v);
-        accBuffer.SetData(a);
+        accBuffer.SetData(a);*/
+        
+        planeWidth = GetComponent<PlaneGenerator>().widthInput;
+        planeHeight = GetComponent<PlaneGenerator>().heightInput;
 
-        computeShader.SetBuffer(kernelHandle, "heightBuffer", heightBuffer);
-        computeShader.SetBuffer(kernelHandle, "velBuffer", velBuffer);
-        computeShader.SetBuffer(kernelHandle, "accBuffer", accBuffer);
+        heightTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.RFloat)
+        {
+            enableRandomWrite = true
+        };
+        heightTexture.Create();
+
+        velTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.RFloat)
+        {
+            enableRandomWrite = true
+        };
+        velTexture.Create();
+        
+        accTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.RFloat)
+        {
+            enableRandomWrite = true
+        };
+        accTexture.Create();
+
+        
+        WaveEquationKernel = computeShader.FindKernel("WaveEquation");
+        AddValueKernel = computeShader.FindKernel("AddValue");
+
+        resolution = new Vector2Int(planeWidth, planeHeight);
+        threadGroupAmount = new Vector3Int(planeWidth, planeHeight, 1);
+
+        computeShader.GetKernelThreadGroupSizes(WaveEquationKernel, out uint xThreadGroupSize, out uint yThreadGroupSize, out uint zThreadGroupSize);
+        threadGroupAmount = new Vector3Int(Mathf.CeilToInt(resolution.x / (float)xThreadGroupSize),  Mathf.CeilToInt(resolution.y / (float)yThreadGroupSize), Mathf.CeilToInt(1 / (float)zThreadGroupSize));
+
+
+        computeShader.SetTexture(WaveEquationKernel, "heightTexture", heightTexture);
+        computeShader.SetTexture(WaveEquationKernel, "velTexture", velTexture);
+        computeShader.SetTexture(WaveEquationKernel, "accTexture", accTexture);
+
+        
+        computeShader.SetTexture(AddValueKernel, "heightTexture", heightTexture);
+
+        computeShader.SetInt("planeWidth", planeWidth);
+        computeShader.SetInt("planeHeight", planeHeight);
+        computeShader.SetFloat("c", c);
+        computeShader.SetFloat("dt", dt);
 
     }
 
     // Update is called once per frame
     void Update()
     {
-        computeShader.Dispatch(kernelHandle, nx/10, ny/10, 1);
+        computeShader.Dispatch(WaveEquationKernel, planeWidth/10, planeHeight/10, 1);
 
-        heightBuffer.GetData(h);
-        //velBuffer.GetData(v);
-        //accBuffer.GetData(a);
+        Renderer rend = GetComponent<Renderer> ();
+        rend.material = new Material(updateVerticesShader);
+        rend.material.SetTexture("importTexture", heightTexture);
 
-        //Debug.Log(sizeof(float));
-
-        Mesh mesh = GetComponent<MeshFilter>().mesh;
+       Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+       Mesh mesh = GetComponent<MeshFilter>().mesh;
         Vector3[] vertices = mesh.vertices;
-
-
-        for (int i = 0; i < nx * ny; i++)
+        int[] triangles = mesh.triangles;
+        RaycastHit hit;
+        if (Input.GetMouseButton(0))
         {
-            vertices[i].y = h[i];
+            if (Physics.Raycast(ray, out hit))
+            {
+                MeshCollider meshCollider = hit.collider as MeshCollider;
+                if (meshCollider != null && meshCollider.sharedMesh != null)
+                {
+                    int vertexHit = GetClosestVertex(hit, triangles);
+                    int x = vertexHit % planeWidth;
+                    int y = vertexHit / planeWidth;
+                    
+                    computeShader.SetInt("hitPosX", x);
+                    computeShader.SetInt("hitPosY", y);
+
+                    computeShader.Dispatch(AddValueKernel, 1,1,1);
+                }
+                
+            }
         }
-
-        mesh.vertices = vertices;
-        mesh.RecalculateNormals();
     }
 
-    void OnDisable()
+    public static int GetClosestVertex(RaycastHit aHit, int[] aTriangles)
     {
-        heightBuffer.Release();
-        velBuffer.Release();
-        accBuffer.Release();
-    }
+        var b = aHit.barycentricCoordinate;
+        int index = aHit.triangleIndex * 3;
+        if (aTriangles == null || index < 0 || index + 2 >= aTriangles.Length)
+            return -1;
 
+        if (b.x > b.y)
+        {
+            if (b.x > b.z)
+                return aTriangles[index]; // x
+            else
+                return aTriangles[index + 2]; // z
+        }
+        else if (b.y > b.z)
+            return aTriangles[index + 1]; // y
+        else
+            return aTriangles[index + 2]; // z
+    }
 }

@@ -131,7 +131,6 @@ public class NS_GPU : MonoBehaviour
         rend.material = new Material(updateVerticesShader);
         //rend.material.mainTexture = densityTexture;
         rend.material.SetTexture("importTexture", densityTexture);
-
     }
 
     void ChangeTexture(){
@@ -161,7 +160,7 @@ public class NS_GPU : MonoBehaviour
                     navierStokesShader.SetFloat("hitPosX", x);
                     navierStokesShader.SetFloat("hitPosY", y);
                     navierStokesShader.SetTexture(addValueKernel, "Out", densityTexture);
-                    navierStokesShader.Dispatch(addValueKernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
+                    navierStokesShader.Dispatch(addValueKernel, 1, 1, 1);
                 }
                 
             }
@@ -183,14 +182,13 @@ public class NS_GPU : MonoBehaviour
 
                     float xAmount = mousePosition.x - previousMousePosition.x;
                     float yAmount = mousePosition.y - previousMousePosition.y;
-                    //Debug.Log(mousePosition.y - previousMousePosition.y);
                     navierStokesShader.SetFloat("hitPosX", x);
                     navierStokesShader.SetFloat("hitPosY", y);
-                    navierStokesShader.SetFloat("xAmount", xAmount);
-                    navierStokesShader.SetFloat("yAmount", yAmount);
+                    navierStokesShader.SetFloat("xAmount", -yAmount);
+                    navierStokesShader.SetFloat("yAmount", xAmount);
 
                     navierStokesShader.SetTexture(addVelocityKernel, "Velocity", velocityTexture);
-                    navierStokesShader.Dispatch(addVelocityKernel, 1, 1, 1);
+                    navierStokesShader.Dispatch(addVelocityKernel, 4, 4, 1);
 
                 }
             }

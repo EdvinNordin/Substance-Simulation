@@ -1,13 +1,14 @@
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor.Build;
 using UnityEngine;
 
 public class NavierStokes : MonoBehaviour
 {
 
 
-    static int nx = 10; // Number of grid cells in the x-direction
-    static int ny = 10; // Number of grid cells in the y-direction
+    public int nx = 10; // Number of grid cells in the x-direction
+    public int ny = 10; // Number of grid cells in the y-direction
 
     public int iter = 1; //iterations of calculation of the whole thing?
     //int size;
@@ -48,8 +49,11 @@ public class NavierStokes : MonoBehaviour
             {
                 for (int j = 0; j < ny; j++)
                 {
+                    Vector3 Pos = new Vector3(i, 0, j);
                     //Debug.Log(i + " " + j);
-                    var obj = Instantiate(prefab, new Vector3(i, 0, j), Quaternion.identity);
+                    var obj = Instantiate(prefab);
+                    obj.transform.position = Pos;
+                    obj.name = (i * nx + j).ToString();
                     pointObjects.Add(obj);
                 }
             }
@@ -88,6 +92,7 @@ public class NavierStokes : MonoBehaviour
 
 
     // Update is called once per frame
+    
     void Update()
     {
         /*for (int i = 0; i < nx; i++)
@@ -102,7 +107,7 @@ public class NavierStokes : MonoBehaviour
             }
         }*/
 
-        if(!debug){
+        /*if(!debug){
 
             
             Mesh mesh = GetComponent<MeshFilter>().mesh;
@@ -161,7 +166,7 @@ public class NavierStokes : MonoBehaviour
                     }
                 }
             }
-        }
+        }*/
 
         //mixing and spreading out. 1: left and right edge, 2: top and bottom edge
         diffuse(1, Vx0, Vx, visc);
@@ -184,10 +189,57 @@ public class NavierStokes : MonoBehaviour
         advect(0, density, source, Vx, Vy);
 
 
-        prevX = xPos;
-        prevY = yPos;
+        xPos = -Input.mousePosition.y;
+        yPos = Input.mousePosition.x;
 
 
+
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            RaycastHit hit;
+
+            if (Input.GetMouseButton(0))
+            {
+                if (Physics.Raycast(ray, out hit))
+                {
+                    //Debug.Log(GetClosestVertex(hit, triangles));
+                    MeshCollider meshCollider = hit.collider as MeshCollider;
+                    if (meshCollider != null && meshCollider.sharedMesh != null)
+                    {
+                        int test = 0;
+                        string name = meshCollider.gameObject.transform.parent.ToString();
+                        int nameLength = name.Length;
+                        name = name.Replace(" (UnityEngine.Transform)", "");
+                        bool suceed = int.TryParse(name, out test);
+                        if(suceed){
+                            int a = test / nx;
+                            int b = test % nx;
+                            density[a, b] += 3.0f;
+                        }
+                    }
+                }
+            }
+            if (Input.GetMouseButton(1))
+            {
+                if (Physics.Raycast(ray, out hit))
+                {
+                    //Debug.Log(GetClosestVertex(hit, triangles));
+                    MeshCollider meshCollider = hit.collider as MeshCollider;
+                    if (meshCollider != null && meshCollider.sharedMesh != null)
+                    {
+                        int test = 0;
+                        string name = meshCollider.gameObject.transform.parent.ToString();
+                        int nameLength = name.Length;
+                        name = name.Replace(" (UnityEngine.Transform)", "");
+                        bool suceed = int.TryParse(name, out test);
+                        if(suceed){
+                            int a = test / nx;
+                            int b = test % nx;
+                            Vx[a,b] = xPos-prevX;
+                            Vy[a,b] = yPos-prevY;
+                        }
+                    }
+                }
+            }
 
         Vector3 Pos;
         for (var i = 0; i < nx; i++)
@@ -195,10 +247,10 @@ public class NavierStokes : MonoBehaviour
             for (var j = 0; j < ny; j++)
             {
                 Pos = pointObjects[j + i * nx].transform.position;
-                pointObjects[j + i * nx].transform.position = new Vector3(Pos.x, Pos.y, density[i, j]);
+                pointObjects[j + i * nx].transform.position = new Vector3(Pos.x, density[i, j], Pos.z );
+                GameObject Triangle = pointObjects[j + i * nx].transform.GetChild(0).gameObject;
+                Triangle.transform.eulerAngles = new Vector3(0,getVelocity(i, j)*180f/3.14f, 0);
             }
-            
-   
         }
         /*
             int a = i / nx;
@@ -206,7 +258,8 @@ public class NavierStokes : MonoBehaviour
             vertices[i].y = source[a, b];
         mesh.vertices = vertices;
         mesh.RecalculateNormals();*/
-        
+        prevX = xPos;
+        prevY = yPos;
     }
 
 
@@ -235,11 +288,11 @@ public class NavierStokes : MonoBehaviour
         {
             for (int j = 1; j < ny - 1; j++)
             {
-                div[i, j] = (-0.5f *
+                div[i, j] = -0.5f *
                     (velocX[i + 1, j] -
                       velocX[i - 1, j] +
                       velocY[i, j + 1] -
-                      velocY[i, j - 1])) / (nx+ny/2);
+                      velocY[i, j - 1]) / (nx+ny/2);
                 p[i, j] = 0;
             }
         }
@@ -367,16 +420,6 @@ public class NavierStokes : MonoBehaviour
         //x[IX(0, N - 1, N)] = 1000f; //y,x,N
     }
 
-    public float getDensity(int i, int j)
-    {
-        return density[i,j];
-    }
-
-    public float fadeDensity(int i, int j, float amount)
-    {
-        density[i,j] -= amount;
-        return density[i,j];
-    }
     public float getVelocity(int i, int j)
     {
         float x = Vx[i, j];
