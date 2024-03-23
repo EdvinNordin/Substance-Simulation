@@ -40,6 +40,8 @@ public class NS_GPU : MonoBehaviour
     int xThreadGroups;
     int yThreadGroups;
 
+    public float value = 1f;
+    public float vel = 1f;
     public float diffusion = 0.01f;
     public float viscosity = 0.000000001f;
     void Start()
@@ -75,6 +77,8 @@ public class NS_GPU : MonoBehaviour
         navierStokesShader.SetInt("Width", planeWidth);
         navierStokesShader.SetInt("Height", planeHeight);
 
+        navierStokesShader.SetFloat("value", value);
+        navierStokesShader.SetFloat("vel", vel);
 
         densityTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.RGFloat);
         densityTexture.enableRandomWrite = true;
@@ -115,17 +119,18 @@ public class NS_GPU : MonoBehaviour
 
     void Update()
     {
+        ChangeTexture();
 
         Diffuse(velocityPrevTexture, velocityTexture, true, viscosity);
         Projection();
+        Advect(velocityTexture, velocityPrevTexture, true);
         Graphics.CopyTexture(velocityPrevTexture, velocityTexture); // Swap output to input
-        Advect(velocityPrevTexture, velocityTexture, true);
         Projection();
 
         Diffuse(densityPrevTexture, densityTexture, false, diffusion);
-        Graphics.CopyTexture(densityTexture, densityPrevTexture);  // Swap output to input
-        Advect(densityPrevTexture, densityTexture, false);
-        ChangeTexture();
+        //Graphics.CopyTexture(densityTexture, densityPrevTexture);  // Swap output to input
+        Advect(densityTexture, densityPrevTexture, false);
+        
 
         Renderer rend = GetComponent<Renderer> ();
         rend.material = new Material(updateVerticesShader);
@@ -187,8 +192,8 @@ public class NS_GPU : MonoBehaviour
                     navierStokesShader.SetFloat("xAmount", -yAmount);
                     navierStokesShader.SetFloat("yAmount", xAmount);
 
-                    navierStokesShader.SetTexture(addVelocityKernel, "Velocity", velocityTexture);
-                    navierStokesShader.Dispatch(addVelocityKernel, 4, 4, 1);
+                    navierStokesShader.SetTexture(addVelocityKernel, "Velocity", velocityPrevTexture);
+                    navierStokesShader.Dispatch(addVelocityKernel, 1, 1, 1);
 
                 }
             }
@@ -229,8 +234,8 @@ public class NS_GPU : MonoBehaviour
         SetBounds(velocityPrevTexture, velocityTexture);
         
         // Projection Pt2
-        //for (int k = 0; k < 10; k++)
-        //{
+        for (int k = 0; k < 10; k++)
+        {
         navierStokesShader.SetTexture(projection2Kernel, "Divergence", divergenceTexture);
         navierStokesShader.SetTexture(projection2Kernel, "PressurePrev", pressureTexture);
         navierStokesShader.SetTexture(projection2Kernel, "Pressure", pressurePrevTexture);
@@ -239,7 +244,7 @@ public class NS_GPU : MonoBehaviour
         navierStokesShader.SetTexture(projection2Kernel, "PressurePrev", pressureTexture);
         navierStokesShader.SetTexture(projection2Kernel, "Pressure", pressurePrevTexture);
         navierStokesShader.Dispatch(projection2Kernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
-        //}
+        }
 
         // Projection Pt3
         navierStokesShader.SetTexture(projection3Kernel, "Velocity", velocityTexture);

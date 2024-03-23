@@ -242,10 +242,10 @@ GameObject:
   - component: {fileID: 425477479}
   - component: {fileID: 425477490}
   - component: {fileID: 425477491}
+  - component: {fileID: 425477495}
   - component: {fileID: 425477493}
   - component: {fileID: 425477492}
   - component: {fileID: 425477494}
-  - component: {fileID: 425477495}
   m_Layer: 0
   m_Name: Plane
   m_TagString: Untagged
@@ -339,14 +339,16 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 425477478}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f890b1128e65065408f23906273c3fd3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   navierStokesShader: {fileID: 7200000, guid: e3b6faf16cbda284e911d064f7914cab, type: 3}
   updateVerticesShader: {fileID: 4800000, guid: 65b97dfb836070d4682bfc74aaf2a8b8, type: 3}
-  diffusion: 0.1
+  value: 10
+  vel: 1
+  diffusion: 0.001
   viscosity: 0.0001
 --- !u!114 &425477491
 MonoBehaviour:
@@ -415,14 +417,14 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 425477478}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6e5fcc8f1a2505d4fa8ec5d36759a339, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   computeShader: {fileID: 7200000, guid: f7dd06bf209cd384fa4cea4968c66872, type: 3}
   updateVerticesShader: {fileID: 4800000, guid: 65b97dfb836070d4682bfc74aaf2a8b8, type: 3}
-  dt: 1
+  dt: 0.1
   c: 1
 --- !u!1 &705507993
 GameObject:

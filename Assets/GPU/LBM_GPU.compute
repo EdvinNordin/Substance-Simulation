@@ -4,8 +4,6 @@
 #pragma kernel Streaming
 #pragma kernel AddValue
 #pragma kernel AddVelocity
-#pragma kernel Setup
-#pragma kernel Out
 
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
@@ -17,7 +15,6 @@ RWTexture2D<float> inRhoTexture;
 RWTexture2D<float2> velTexture;
 RWTexture2D<float2> tempVelTexture;
 RWTexture2D<float> latticeTexture;
-RWTexture2D<float> outTexture;
 
 #define cc 1.0f
 
@@ -50,8 +47,8 @@ void Density(int2 id : SV_DispatchThreadID)
 
     rhoTmp += inRhoTexture[id];
 
-    if (rhoTmp < 0.01f) {
-        velTexture[id] = float2(mXTmp / 0.01f, mYTmp / 0.01f);
+    if (rhoTmp < 0.5f) {
+        velTexture[id] = float2(mXTmp / 0.5f, mYTmp / 0.5f);
     }
     else {
         velTexture[id] = float2(mXTmp / rhoTmp, mYTmp / rhoTmp);
@@ -60,7 +57,7 @@ void Density(int2 id : SV_DispatchThreadID)
     velTexture[id] += tempVelTexture[id];
 
     //float max_velocity_magnitude = 5.0f;
-     velTexture[id] = float2(velTexture[id].x / 5.50f, velTexture[id].y / 5.50f);
+    velTexture[id] = float2(velTexture[id].x / 3.0f, velTexture[id].y / 3.0f);
     float velocityMagnitude  = sqrt(velTexture[id].x * velTexture[id].x + velTexture[id].y * velTexture[id].y);
     //if(velocityMagnitude > max_velocity_magnitude)
     //{
@@ -73,9 +70,11 @@ void Density(int2 id : SV_DispatchThreadID)
     rhoTexture[id] = rhoTmp;
     inRhoTexture[id] = 0.0f;
 
-    if(velocityMagnitude/sqrt(cc)>0.4){
+    /*if(velocityMagnitude/sqrt(cc)>0.4){
         rhoTexture[id] = -10.0f;
-    };
+    }*/
+
+    tempVelTexture[id] = float2(0.0f, 0.0f);
 }
 
 [numthreads(8, 8, 1)]
@@ -151,19 +150,7 @@ void AddValue(int2 id : SV_DispatchThreadID)
 void AddVelocity(int2 id : SV_DispatchThreadID)
 {
     float2 newVelocity;
-    newVelocity.x = xAmount/1000.0f;
-    newVelocity.y = yAmount/1000.0f;
+    newVelocity.x = xAmount/1.0f;
+    newVelocity.y = yAmount/1.0f;
 	tempVelTexture[int2(hitPosX+id.x-2, hitPosY+id.y-2)] += newVelocity;
-}
-
-[numthreads(8, 8, 1)]
-void Setup(int2 id : SV_DispatchThreadID)
-{
-    rhoTexture[id] = 3.0f;
-}
-
-[numthreads(8, 8, 1)]
-void Out(int2 id : SV_DispatchThreadID)
-{
-    outTexture[id] = rhoTexture[id]-1.0f;
 }

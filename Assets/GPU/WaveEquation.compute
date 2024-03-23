@@ -20,38 +20,16 @@ float dt;
 [numthreads(10,10,1)]
 void WaveEquation (int2 id : SV_DispatchThreadID)
 {   
-    if (id.x == 0)
-    {
-        velTexture[id] = -velTexture[id];
-        heightTexture[id] = 1.0f;
-    }
-    else if (id.x == width - 1)
-    {
-        velTexture[id] = -velTexture[id];
-        heightTexture[id] = 2.0f;
-    }
-    else if (id.y == 0)
-    {
-        velTexture[id] = -velTexture[id];
-        heightTexture[id] = 3.0f;
-    }
-    else if (id.y == height - 1)
-    {
-        velTexture[id] = -velTexture[id];
-        heightTexture[id] = 4.0f;
-    }
-    else
-    {
+    
         accTexture[id] = c * c * (heightTexture[int2(id.x - 1, id.y)] + heightTexture[int2(id.x + 1, id.y)] + heightTexture[int2(id.x, id.y + 1)] + 
                         heightTexture[int2(id.x, id.y - 1)] - 4.0f * heightTexture[id]);
         velTexture[id] = velTexture[id] + dt * accTexture[id];
         heightTexture[id] = heightTexture[id] + dt * velTexture[id];
-        heightTexture[id] = 0.1f;
-    }
+        
 }
 
-[numthreads(1, 1, 1)]
+[numthreads(4, 4, 1)]
 void AddValue(int2 id : SV_DispatchThreadID)
 {
-	heightTexture[int2(hitPosX, hitPosY)] += 0.1f;
+	heightTexture[int2(hitPosX+id.x-2, hitPosY+id.y-2)] += 1.0f;
 }

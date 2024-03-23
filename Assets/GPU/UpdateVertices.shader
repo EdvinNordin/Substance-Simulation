@@ -34,7 +34,7 @@ Shader "UpdateVertices"
                 v2f o;
                 float4 worldPos = mul(unity_ObjectToWorld, v.vertex);
                 float displacement = tex2Dlod(importTexture, float4(v.uv, 0, 0)).r;
-                worldPos.y += displacement*100.0f;
+                worldPos.y += displacement*0.0f;
                 o.vertex = mul(UNITY_MATRIX_VP, worldPos);
                 o.uv = v.uv;
                 return o;
@@ -42,12 +42,12 @@ Shader "UpdateVertices"
             
             fixed4 frag (v2f i) : SV_Target
             {
-                float value = tex2D(importTexture, i.uv).r;
+                float value = tex2D(importTexture, i.uv).r*10.0f;
                 float r = value * (sin(_Time.w + 0.0) * 0.05 + 0.5);
                 float g = value * (sin(_Time.w + 2.0) * 0.05 + 0.5);
                 float b = value * (sin(_Time.w + 4.0) * 0.05 + 0.5);
                 float alpha = value;
-                fixed4 col = fixed4(r, g, b, alpha);
+                fixed4 col = fixed4(1.0f-r, 1.0f-g, 1.0f-b, alpha);
                 return col;
             }
             ENDCG

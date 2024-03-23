@@ -16,9 +16,6 @@ public class LBM_GPU : MonoBehaviour
     private int streamingKernel;
     private int addValueKernel;
     private int addVelocityKernel;
-    private int boundaryKernel;
-    private int setupKernel;
-    private int outKernel;
 
     private RenderTexture fTexture;
     private RenderTexture fnewTexture;
@@ -28,7 +25,6 @@ public class LBM_GPU : MonoBehaviour
     private RenderTexture velTexture;
     private RenderTexture tempVelTexture;
     private RenderTexture latticeTexture;
-    private RenderTexture outTexture;
 
     float[] lattice = { -1.0f, 0.0f, 1.0f, -1.0f, 0.0f, 1.0f, -1.0f, 0.0f, 1.0f,  
                         1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f, -1.0f, -1.0f,  
@@ -43,12 +39,9 @@ public class LBM_GPU : MonoBehaviour
 
     Vector2 mousePosition;
     Vector2 previousMousePosition;
-    Vector2 test;
     
     Vector2Int resolution;
     Vector3Int threadGroupAmount;
-    int xThreadGroups;
-    int yThreadGroups;
 
     // Start is called before the first frame update
     void Start()
@@ -64,8 +57,6 @@ public class LBM_GPU : MonoBehaviour
         streamingKernel = LBMShader.FindKernel("Streaming");
         addValueKernel = LBMShader.FindKernel("AddValue");
         addVelocityKernel = LBMShader.FindKernel("AddVelocity");
-        setupKernel = LBMShader.FindKernel("Setup");
-        outKernel = LBMShader.FindKernel("Out");
 
         resolution = new Vector2Int(planeWidth, planeHeight);
         threadGroupAmount = new Vector3Int(planeWidth, planeHeight, 1);
@@ -125,12 +116,6 @@ public class LBM_GPU : MonoBehaviour
         };
         tempVelTexture.Create();
 
-        outTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.RFloat)
-        {
-            enableRandomWrite = true
-        };
-        outTexture.Create();
-
 
         latticeTemp = new Texture2D(9, 3, TextureFormat.RFloat, false);
         latticeTemp.SetPixelData(lattice, 0);
@@ -139,9 +124,6 @@ public class LBM_GPU : MonoBehaviour
         Graphics.Blit(latticeTemp, latticeTexture);
         latticeTexture.Create();
         
-        LBMShader.SetTexture(setupKernel, "rhoTexture", rhoTexture);
-        LBMShader.Dispatch(setupKernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
-
         LBMShader.SetTexture(addValueKernel, "inRhoTexture", inRhoTexture);
         LBMShader.SetTexture(addVelocityKernel, "tempVelTexture", tempVelTexture);
         
@@ -215,7 +197,7 @@ public class LBM_GPU : MonoBehaviour
                     LBMShader.SetFloat("hitPosY", y);
 
                     
-                    LBMShader.Dispatch(addValueKernel, 4, 4, 1);
+                    LBMShader.Dispatch(addValueKernel, 1, 1, 1);
                 }
                 
             }
@@ -242,7 +224,7 @@ public class LBM_GPU : MonoBehaviour
                     LBMShader.SetFloat("xAmount", -yAmount);
                     LBMShader.SetFloat("yAmount", xAmount);
 
-                    LBMShader.Dispatch(addVelocityKernel, 4, 4, 1);
+                    LBMShader.Dispatch(addVelocityKernel, 1, 1, 1);
 
                 }
             }

@@ -125,7 +125,7 @@ public class WEGPU : MonoBehaviour
                     computeShader.SetInt("hitPosX", x);
                     computeShader.SetInt("hitPosY", y);
 
-                    computeShader.Dispatch(AddValueKernel, 1,1,1);
+                    computeShader.Dispatch(AddValueKernel, 1, 1, 1);
                 }
                 
             }
