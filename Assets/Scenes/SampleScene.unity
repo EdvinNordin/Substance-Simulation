@@ -244,7 +244,6 @@ GameObject:
   - component: {fileID: 425477491}
   - component: {fileID: 425477495}
   - component: {fileID: 425477493}
-  - component: {fileID: 425477492}
   - component: {fileID: 425477494}
   m_Layer: 0
   m_Name: Plane
@@ -265,8 +264,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 24dcb743686370049914f3c726799290, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  widthInput: 200
-  heightInput: 200
+  widthInput: 100
+  heightInput: 100
 --- !u!4 &425477480
 Transform:
   m_ObjectHideFlags: 0
@@ -339,17 +338,18 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 425477478}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f890b1128e65065408f23906273c3fd3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   navierStokesShader: {fileID: 7200000, guid: e3b6faf16cbda284e911d064f7914cab, type: 3}
   updateVerticesShader: {fileID: 4800000, guid: 65b97dfb836070d4682bfc74aaf2a8b8, type: 3}
-  value: 10
+  value: 1
   vel: 1
-  diffusion: 0.001
-  viscosity: 0.0001
+  diffusion: 0.0001
+  viscosity: 0.1
+  deltaTime: 0.1
 --- !u!114 &425477491
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -365,18 +365,7 @@ MonoBehaviour:
   LBMShader: {fileID: 7200000, guid: 2bf4c46588664764b843ea71c5cab22e, type: 3}
   updateVerticesShader: {fileID: 4800000, guid: 65b97dfb836070d4682bfc74aaf2a8b8, type: 3}
   tau: 1
---- !u!114 &425477492
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 425477478}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7ccc2122baf588042b0281f6b8a1229c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  dt: 1
 --- !u!114 &425477493
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -389,7 +378,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f8ade156ea7e24e4cae0bd81f88c04f8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  prefab: {fileID: 0}
+  prefab: {fileID: 1333758825}
 --- !u!114 &425477494
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -417,7 +406,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 425477478}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6e5fcc8f1a2505d4fa8ec5d36759a339, type: 3}
   m_Name: 

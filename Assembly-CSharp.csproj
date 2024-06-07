@@ -50,7 +50,6 @@
      <Compile Include="Assets\CPU\NavierStokes.cs" />
      <Compile Include="Assets\PlaneGenerator.cs" />
      <Compile Include="Assets\GPU\NS_GPU.cs" />
-     <Compile Include="Assets\CPU\LatticeBoltzmann.cs" />
      <Compile Include="Assets\Testing\StableFluids2D.cs" />
      <None Include="Assets\GPU\NS_GPU.compute" />
      <None Include="Assets\GPU\UpdateVertices.shader" />

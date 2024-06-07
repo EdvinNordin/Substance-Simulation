@@ -5,8 +5,8 @@ using UnityEngine;
 public class LBM : MonoBehaviour
 {
 
-    private const int nx = 200;
-    private const int ny = 200;
+    private const int nx = 100;
+    private const int ny = 100;
     private const int q = 9;
 
     private float[,,] f = new float[nx, ny, q]; // Distribution functions
@@ -25,11 +25,13 @@ public class LBM : MonoBehaviour
     private float[,] inputRho = new float[nx, ny];   // Density
 
     // D2Q9 and Weights
-    private int[] latticeDirX = { 0, 1, 0, -1, 0, 1, -1, -1, 1 };
-    private int[] latticeDirY = { 0, 0, 1, 0, -1, 1, 1, -1, -1 };
-    private float[] latticeWeight = { 4.0f / 9, 1.0f / 9, 1.0f / 9, 1.0f / 9, 1.0f / 9, 1.0f / 36, 1.0f / 36, 1.0f / 36, 1.0f / 36 };
+    //private int[] latticeDirX = { 0, 1, 0, -1, 0, 1, -1, -1, 1 };
+    private int[] latticeDirX = { -1, 0, 1, -1, 0, 1, -1, 0, 1 };
+    //private int[] latticeDirY = { 0, 0, 1, 0, -1, 1, 1, -1, -1 };
+    private int[] latticeDirY = { 1, 1, 1, 0, 0, 0, -1, -1, -1 };
+    private float[] latticeWeight = { 1.0f / 36.0f, 1.0f / 9.0f, 1.0f / 36.0f, 1.0f / 9.0f, 4.0f / 9.0f, 1.0f / 9.0f, 1.0f / 36.0f, 1.0f / 9.0f, 1.0f / 36.0f  };
 
-    private const float tau = 1.50f; //Relaxation time 0.5 to 2
+    public const float tau = 1.0f; //Relaxation time 0.5 to 2
 
     List<GameObject> pointObjects;
 
@@ -66,7 +68,7 @@ public class LBM : MonoBehaviour
                 velX[i, j] = 0.0f;
                 velY[i, j] = 0.0f;
                 rho[i, j] = 0.0f;
-                inputRho[i, j] = 1.0f;
+                inputRho[i, j] = 0.0f;
                 inputVelX[i, j] = 0.0f;
                 inputVelY[i, j] = 0.0f;
 
@@ -89,7 +91,7 @@ public class LBM : MonoBehaviour
             for (int j = 0; j < ny; j++)
             {
 
-                float rhoTmp = 1;
+                float rhoTmp = 0;
                 float mXTmp = 0;
                 float mYTmp = 0;
 
@@ -101,15 +103,18 @@ public class LBM : MonoBehaviour
                 }
 
 
-                if(rhoTmp < 0.1f)
+                if(rhoTmp < 0.0001f)
                 {
-                    rhoTmp = 0.1f;
+                    rhoTmp = 0.0001f;
                 }
 
                 //velocity = momentum / rho(density)
                 rho[i, j] = rhoTmp+inputRho[i,j];
                 velX[i, j] = mXTmp / rhoTmp;// + inputVelX[i,j];
                 velY[i, j] = mYTmp / rhoTmp;// + inputVelY[i,j];
+                
+                //velX[i, j] += inputVelX[i, j];
+                //velY[i, j] += inputVelY[i, j];
 
                 inputRho[i,j] = 0.0f;
                 float distance = Mathf.Sqrt(velX[i, j] * velX[i, j] + velY[i, j] * velY[i, j]);
@@ -117,19 +122,20 @@ public class LBM : MonoBehaviour
 
                 if(distance > 1.0f){
                    
-                    velX[i, j] = velX[i, j] / distance;
-                    velY[i, j] = velY[i, j] / distance;               
+                    //velX[i, j] = velX[i, j] / distance;
+                    //velY[i, j] = velY[i, j] / distance;               
 
                 }
+                
+                float uu = velX[i, j] * velX[i, j] + velY[i, j] * velY[i, j];
                 for (int k = 0; k < q; k++)
                 {
                     float vu = latticeDirX[k] * velX[i, j] + latticeDirY[k] * velY[i, j];
-                    float uu = velX[i, j] * velX[i, j] + velY[i, j] * velY[i, j];
 
-                    feq[i, j, k] = latticeWeight[k] * rho[i, j] * (1 + 3 * vu + 9 / 2 * vu * vu + 3 / 2 * uu);
+                    feq[i, j, k] = latticeWeight[k] * rho[i, j] * (1 + 3 * vu + 9 / 2 * vu * vu - 3 / 2 * uu);
                     fnew[i, j, k] = f[i, j, k] -(f[i, j, k] - feq[i, j, k]) / tau;
+                    
                 }
-
             }
         }
 
@@ -139,7 +145,7 @@ public class LBM : MonoBehaviour
         {
             for (int j = 0; j < ny; j++)
             {
-                for (int k = 0; k < q; k++)
+                /*for (int k = 0; k < q; k++)
                 {
                     int nextX = i + latticeDirX[k];
                     int nextY = j + latticeDirY[k];
@@ -153,6 +159,76 @@ public class LBM : MonoBehaviour
                     else
                     {
                         f[i, j, k] = 0f;//fnew[i, j, k];
+                    }
+                }*/
+                
+
+                for (int k = 0; k < 9; ++k)
+                {
+                    int test = Mathf.Abs((int)Mathf.Clamp((fnew[i, j, k]*1000), -5, 5));
+                    if(test > 1){
+                        //Debug.Log(i + ", " + j);
+                    }
+                    int nextX = i + latticeDirX[k] * test;
+                    int nextY = j + latticeDirY[k] * test;
+                    
+                    
+                    if (nextX < 0 && nextY < 0){ // top left
+                           f[0, 0, k] = fnew[i,j,k];
+                        
+                    }
+                    else if (nextX < 0 && nextY >= ny){ //bottom left
+                        
+                            f[0, ny-1, k] = fnew[i,j,k];
+                        
+                    }
+                    else if (nextX >= nx && nextY < 0){ // top right
+                           f[nx-1, 0, k] = fnew[i,j,k];
+                        
+                    }
+                    else if (nextX >= nx && nextY >= ny){ // bottom right
+                           f[nx-1, ny-1, k] = fnew[i,j,k];
+                        
+                    }
+                    
+                    else if(nextX < 0)
+                    {
+
+                        
+                        f[0, nextY, k] = fnew[i,j,k];
+                        
+                        
+                    }   
+                    else if(nextX >= nx)
+                    {
+                        
+                            //f[i,j,k-2] += fnew[i,j,k];
+                            //f[i, j, k] = 0;
+                            
+                            f[nx-1, nextY, k] = fnew[i,j,k];
+                        
+                        
+                    }
+                    else if(nextY < 0)
+                    {
+                         //f[i,j,k+6] += fnew[i,j,k];
+                            //f[i, j, k] = 0;
+                            f[nextX, 0, k] = fnew[i,j,k];
+                        
+                        
+                    }
+                    else if(nextY >= ny)
+                    {
+                        
+                            //f[i,j,k-6] += fnew[i,j,k];
+                            //f[i, j, k] = 0;
+                            f[nextX, ny-1, k] = fnew[i,j,k];
+                        
+                        
+                    }
+                    else
+                    {
+                        f[nextX, nextY, k] = fnew[i, j, k];
                     }
                 }
             }
@@ -184,7 +260,7 @@ public class LBM : MonoBehaviour
                     //pointObjects[0].transform.position = hit.point;
                     int a = vertexHit / nx;
                     int b = vertexHit % nx;
-                    inputRho[a, b] += 1.0f;
+                    inputRho[a, b] += 0.001f;
                 }
             }
         }
@@ -229,7 +305,7 @@ public class LBM : MonoBehaviour
             Vector3 pos = pointObjects[i].transform.position;
             pointObjects[i].transform.position = new Vector3 (pos.x, temp, pos.z);
             // = new Vector3(0, temp, 0);*/
-            vertices[i].y = temp;
+            vertices[i].y = temp*100;
         }
 
         //Debug.Log(CalculateReynoldsNumber(nx));
@@ -341,3 +417,97 @@ public float CalculateCFL()
     return CFL;
 }
 }
+
+
+                    /* if(nextX < 0 && nextY < 0){
+                        if(k == 0) {
+                            //f[i,j,6] += fnew[i,j,k];
+                            f[i, j, k] = 0;
+                        }
+                        else if(k == 1){
+                            //f[i,j,7] += fnew[i,j,k];
+                            f[i, j, k] = 0;
+                        }
+                        else if(k == 2){
+                            //f[i,j,6] += fnew[i,j,k];
+                            f[i, j, k] = 0;
+                        }
+                        else if(k == 5){
+                            //f[i,j,3] += fnew[i,j,k];
+                            f[i, j, k] = 0;
+                        }
+                        else if(k == 8){
+                            //f[i,j,6] += fnew[i,j,k];
+                            f[i, j, k] = 0;
+                        }
+                        f[i, j, k]= fnew[i, j, k];
+                    }
+                    else if(nextX >= nx && nextY < 0){
+                        if(k == 2) {
+                            //f[i,j,6] += fnew[i,j,k];
+                            f[i, j, k] = 0;
+                        }
+                        else if(k == 1){
+                            //f[i,j,5] += fnew[i,j,k];
+                            f[i, j, k] = 0;
+                        }
+                        else if(k == 0){
+                            //f[i,j,6] += fnew[i,j,k];
+                            f[i, j, k] = 0;
+                        }
+                        else if(k == 3){
+                            //f[i,j,8] += fnew[i,j,k];
+                            f[i, j, k] = 0;
+                        }
+                        else if(k == 5){
+                            //f[i,j,6] += fnew[i,j,k];
+                            f[i, j, k] = 0;
+                        }
+                        f[i, j, k]= fnew[i, j, k];
+                    }
+                    else if(nextX < 0 && nextY >= ny){
+                        if(k == 0) {
+                            //f[i,j,2] += fnew[i,j,k];
+                            f[i, j, k] = 0;
+                        }
+                        else if(k == 3){
+                            //f[i,j,5] += fnew[i,j,k];
+                            f[i, j, k] = 0;
+                        }
+                        else if(k == 6){
+                            //f[i,j,2] += fnew[i,j,k];
+                            f[i, j, k] = 0;
+                        }
+                        else if(k == 7){
+                            //f[i,j,1] += fnew[i,j,k];
+                            f[i, j, k] = 0;
+                        }
+                        else if(k == 8){
+                            //f[i,j,2] += fnew[i,j,k];
+                            f[i, j, k] = 0;
+                        }
+                        f[i, j, k]= fnew[i, j, k];
+                    }
+                    else if(nextX >= nx && nextY >= ny){
+                        if(k == 2) {
+                            //f[i,j,0] += fnew[i,j,k];
+                            f[i, j, k] = 0;
+                        }
+                        else if(k == 3){
+                            //f[i,j,1] += fnew[i,j,k];
+                            f[i, j, k] = 0;
+                        }
+                        else if(k == 8){
+                            //f[i,j,0] += fnew[i,j,k];
+                            f[i, j, k] = 0;
+                        }
+                        else if(k == 7){
+                            //f[i,j,1] += fnew[i,j,k];
+                            f[i, j, k] = 0;
+                        }
+                        else if(k == 0){
+                            //f[i,j,2] += fnew[i,j,k];
+                            f[i, j, k] = 0;
+                        }
+                        f[i, j, k]= fnew[i, j, k];
+                    } */

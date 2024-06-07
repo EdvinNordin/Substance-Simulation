@@ -10,6 +10,7 @@ public class LBM_GPU : MonoBehaviour
     public ComputeShader LBMShader;
     public Shader updateVerticesShader;
     public float tau = 1.0f;
+    public float dt = 0.1f;
 
     private int densityKernel;
     private int collisionKernel;
@@ -67,6 +68,7 @@ public class LBM_GPU : MonoBehaviour
         LBMShader.SetInt("width", planeWidth);
         LBMShader.SetInt("height", planeHeight);
         LBMShader.SetFloat("tau", tau);
+        LBMShader.SetFloat("dt", dt);
 
         fTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.RFloat)
         {
@@ -202,7 +204,7 @@ public class LBM_GPU : MonoBehaviour
                 
             }
         }
-        if (Input.GetMouseButton(1))
+        if (Input.GetKeyDown(KeyCode.M))//(Input.GetMouseButton(1))
         {
             if (Physics.Raycast(ray, out hit))
             {

@@ -10,12 +10,9 @@
 #pragma kernel AddValue
 #pragma kernel AddVelocity
 
-// Simulation parameters
-#define dt 0.01
-//#define viscosity 0.001
-//#define diffusion 0.000001
-
+#define zero 0.0f
 float spread;
+float dt;
 
 uint Width;
 uint Height;
@@ -31,12 +28,12 @@ float yAmount;
 float value;
 float vel;
 
-Texture2D<float2> In;  // Input Texture
-RWTexture2D<float2> Out;  // Output Texture
-RWTexture2D<float2> Velocity;  // Velocity Texture
-RWTexture2D<float> Pressure;  // Pressure Texture
-Texture2D<float> PressurePrev;  // Previous Pressure Texture
-RWTexture2D<float> Divergence;  // Divergence Texture
+Texture2D<float4> In;  // Input Texture
+RWTexture2D<float4> Out;  // Output Texture
+RWTexture2D<float4> Velocity;  // Velocity Texture
+RWTexture2D<float4> Pressure;  // Pressure Texture
+Texture2D<float4> PressurePrev;  // Previous Pressure Texture
+RWTexture2D<float4> Divergence;  // Divergence Texture
 
 [numthreads(8, 8, 1)]
 void Advection(int2 id : SV_DispatchThreadID)
@@ -51,9 +48,17 @@ void Advection(int2 id : SV_DispatchThreadID)
 	float2 st1 = vec.xy - xy0;
 	float2 st0 = 1 - st1;
 
-	Out[id] = 
+    float2 testOut;
+
+    
+	testOut = 
 		st0.x * (st0.y * In[xy0] + st1.y * In[int2(xy0.x, xy1.y)]) +
 		st1.x * (st0.y * In[int2(xy1.x, xy0.y)] + st1.y * In[xy1]);
+    
+    Out[id] = float4(testOut.x, testOut.y, zero, zero);
+    /*Out[id].y = testOut.y;
+    Out[id].z = zero;
+    Out[id].w = zero;*/
 
 }
 
@@ -62,48 +67,63 @@ void Diffusion(int2 id : SV_DispatchThreadID)
 {
     float a = dt * spread * (Width - 2) * (Height - 2);
 
-    Out[id] =
+    float2 testOut;
+    testOut =
             (In[id] + a * (Out[id + int2(1, 0)] + Out[id + int2(-1, 0)] + 
             Out[id + int2(0, 1)] + Out[id + int2(0, -1)])) / (1 + 4 * a);
+    
+    
+            Out[id] = float4(testOut.x, testOut.y, zero, zero);
 }
 
 [numthreads(8, 8, 1)]
 void Projection(int2 id : SV_DispatchThreadID) 
 {
-    Divergence[int2(id)] = -0.5f *
+    float2 testOut;
+    testOut = -0.5f *
                     ((Velocity[int2(id.x+1, id.y)].x -
                       Velocity[int2(id.x-1, id.y)].x)/Width +
                       (Velocity[int2(id.x, id.y+1)].y -
                       Velocity[int2(id.x, id.y-1)].y)/ 
                       Height);
+                      Divergence[id] = float4(testOut.x, testOut.y, zero, zero);
+                      
         
-    Pressure[int2(id)] = 0;
+    Pressure[int2(id)] = float4(zero, zero, zero, zero);
     
 }
 
 [numthreads(8, 8, 1)]
 void Projection2(int2 id : SV_DispatchThreadID) 
 {
-    Pressure[id] = 
+    float2 testOut;
+    testOut = 
                 (Divergence[id] + (PressurePrev[id + int2(1, 0)] + PressurePrev[id + int2(-1, 0)] + 
                 PressurePrev[id + int2(0, 1)] + PressurePrev[id + int2(0, -1)])) / 4;
+                Pressure[id] = float4(testOut.x, testOut.y, zero, zero);
+                      
 }
 
 [numthreads(8, 8, 1)]
 void Projection3(int2 id : SV_DispatchThreadID) 
 {
+    float2 testOut;
     float2 newVelocity;
     newVelocity.x = Velocity[id].x - 0.5f * (PressurePrev[int2(id.x+1, id.y)] - PressurePrev[int2(id.x-1, id.y)]) * (Width);
     newVelocity.y = Velocity[id].y - 0.5f * (PressurePrev[int2(id.x, id.y+1)] - PressurePrev[int2(id.x, id.y-1)]) * (Height);
-    Velocity[id] = newVelocity;
+    testOut = newVelocity;
+
+    Velocity[id] = float4(testOut.x, testOut.y, zero, zero);
+                      
 
 }
 
 [numthreads(16, 1, 1)]
 void SetBoundsX(int id : SV_DispatchThreadID)
 {
+    float2 testOut;
     if (id.x < Width/2){
-        Out[int2(0, id.x)] = -In[int2(1, id.x)];
+        Out[float2(0, id.x)] = -In[float2(1, id.x)];
     }
     else{
         Out[int2(Width-1, id.x-Width/2)] = -In[int2(Width-2, id.x-Width/2)];
@@ -131,5 +151,5 @@ void AddValue(int2 id : SV_DispatchThreadID)
 void AddVelocity(int2 id : SV_DispatchThreadID)
 {
     float scale = vel;
-	Velocity[int2(hitPosX+id.x-2, hitPosY+id.y-2)] += float2(xAmount * scale, yAmount * scale);
+	//Velocity[int2(hitPosX+id.x-2, hitPosY+id.y-2)] += float2(xAmount * scale, yAmount * scale);
 }

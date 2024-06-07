@@ -44,7 +44,7 @@ public class NavierStokes : MonoBehaviour
         {
             //pointObjects.Add(Instantiate(prefab, new Vector3(1 / 2, 0, 1 / 2), Quaternion.identity));
 
-            
+
             for (int i = 0; i < nx; i++)
             {
                 for (int j = 0; j < ny; j++)
@@ -72,13 +72,13 @@ public class NavierStokes : MonoBehaviour
 
         Vx0 = new float[nx, ny];
         Vy0 = new float[nx, ny];
-        
+
         for (int i = 0; i < nx; i++)
 
         {
-            for(int j = 0; j < ny; j++)
+            for (int j = 0; j < ny; j++)
             {
-                source[i,j] = 2f;
+                source[i, j] = 2f;
                 density[i, j] = 0f;//Random.value;
 
                 Vx[i, j] = 0.0f;
@@ -92,7 +92,7 @@ public class NavierStokes : MonoBehaviour
 
 
     // Update is called once per frame
-    
+
     void Update()
     {
         /*for (int i = 0; i < nx; i++)
@@ -194,52 +194,53 @@ public class NavierStokes : MonoBehaviour
 
 
 
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        RaycastHit hit;
 
-            if (Input.GetMouseButton(0))
+        if (Input.GetMouseButton(0))
+        {
+            if (Physics.Raycast(ray, out hit))
             {
-                if (Physics.Raycast(ray, out hit))
+                //Debug.Log(GetClosestVertex(hit, triangles));
+                MeshCollider meshCollider = hit.collider as MeshCollider;
+                if (meshCollider != null && meshCollider.sharedMesh != null)
                 {
-                    //Debug.Log(GetClosestVertex(hit, triangles));
-                    MeshCollider meshCollider = hit.collider as MeshCollider;
-                    if (meshCollider != null && meshCollider.sharedMesh != null)
+                    int test = 0;
+                    string name = meshCollider.gameObject.transform.parent.ToString();
+                    int nameLength = name.Length;
+                    name = name.Replace(" (UnityEngine.Transform)", "");
+                    bool suceed = int.TryParse(name, out test);
+                    if (suceed)
                     {
-                        int test = 0;
-                        string name = meshCollider.gameObject.transform.parent.ToString();
-                        int nameLength = name.Length;
-                        name = name.Replace(" (UnityEngine.Transform)", "");
-                        bool suceed = int.TryParse(name, out test);
-                        if(suceed){
-                            int a = test / nx;
-                            int b = test % nx;
-                            density[a, b] += 3.0f;
-                        }
+                        int a = test / nx;
+                        int b = test % nx;
+                        density[a, b] += 3.0f;
                     }
                 }
             }
-            if (Input.GetMouseButton(1))
+        }
+        /*if (Input.GetMouseButton(1))
+        {
+            if (Physics.Raycast(ray, out hit))
             {
-                if (Physics.Raycast(ray, out hit))
+                //Debug.Log(GetClosestVertex(hit, triangles));
+                MeshCollider meshCollider = hit.collider as MeshCollider;
+                if (meshCollider != null && meshCollider.sharedMesh != null)
                 {
-                    //Debug.Log(GetClosestVertex(hit, triangles));
-                    MeshCollider meshCollider = hit.collider as MeshCollider;
-                    if (meshCollider != null && meshCollider.sharedMesh != null)
-                    {
-                        int test = 0;
-                        string name = meshCollider.gameObject.transform.parent.ToString();
-                        int nameLength = name.Length;
-                        name = name.Replace(" (UnityEngine.Transform)", "");
-                        bool suceed = int.TryParse(name, out test);
-                        if(suceed){
-                            int a = test / nx;
-                            int b = test % nx;
-                            Vx[a,b] = xPos-prevX;
-                            Vy[a,b] = yPos-prevY;
-                        }
+                    int test = 0;
+                    string name = meshCollider.gameObject.transform.parent.ToString();
+                    int nameLength = name.Length;
+                    name = name.Replace(" (UnityEngine.Transform)", "");
+                    bool suceed = int.TryParse(name, out test);
+                    if(suceed){
+                        int a = test / nx;
+                        int b = test % nx;
+                        Vx[a,b] = xPos-prevX;
+                        Vy[a,b] = yPos-prevY;
                     }
                 }
             }
+        }*/
 
         Vector3 Pos;
         for (var i = 0; i < nx; i++)
@@ -247,9 +248,9 @@ public class NavierStokes : MonoBehaviour
             for (var j = 0; j < ny; j++)
             {
                 Pos = pointObjects[j + i * nx].transform.position;
-                pointObjects[j + i * nx].transform.position = new Vector3(Pos.x, density[i, j], Pos.z );
+                pointObjects[j + i * nx].transform.position = new Vector3(Pos.x, density[i, j], Pos.z);
                 GameObject Triangle = pointObjects[j + i * nx].transform.GetChild(0).gameObject;
-                Triangle.transform.eulerAngles = new Vector3(0,getVelocity(i, j)*180f/3.14f, 0);
+                Triangle.transform.eulerAngles = new Vector3(0, getVelocity(i, j) * 180f / 3.14f, 0);
             }
         }
         /*
@@ -265,13 +266,13 @@ public class NavierStokes : MonoBehaviour
 
     public void addDensity(int x, int y, float amount)
     {
-        density[x,y] += amount;
+        density[x, y] += amount;
     }
 
     public void addVelocity(int x, int y, float amountX, float amountY)
     {
-        Vx[x,y] += amountX;
-        Vy[x,y] += amountY;
+        Vx[x, y] += amountX;
+        Vy[x, y] += amountY;
     }
 
     //mixing and spreading out
@@ -292,7 +293,7 @@ public class NavierStokes : MonoBehaviour
                     (velocX[i + 1, j] -
                       velocX[i - 1, j] +
                       velocY[i, j + 1] -
-                      velocY[i, j - 1]) / (nx+ny/2);
+                      velocY[i, j - 1]) / (nx + ny / 2);
                 p[i, j] = 0;
             }
         }
@@ -344,7 +345,7 @@ public class NavierStokes : MonoBehaviour
                 if (x > nxFloat + 0.5) x = nxFloat + 0.5f;
                 i0 = Mathf.Floor(x);
                 i1 = i0 + 1.0f;
-                
+
                 if (y < 0.5) y = 0.5f;
                 if (y > nyFloat + 0.5) y = nyFloat + 0.5f;
                 j0 = Mathf.Floor(y);
@@ -396,7 +397,7 @@ public class NavierStokes : MonoBehaviour
     {
         for (int i = 1; i < nx - 1; i++)
         {
-            for(int j = 1; j < ny - 1; j++)
+            for (int j = 1; j < ny - 1; j++)
             {
                 x[i, 0] = bound == 2 ? -x[i, 1] : x[i, 1]; // if bound = 2 is true x = -x else x = x 
                 x[i, ny - 1] = bound == 2 ? -x[i, ny - 2] : x[i, ny - 2];
