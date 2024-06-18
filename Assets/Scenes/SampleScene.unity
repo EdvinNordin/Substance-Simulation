@@ -347,8 +347,8 @@ MonoBehaviour:
   updateVerticesShader: {fileID: 4800000, guid: 65b97dfb836070d4682bfc74aaf2a8b8, type: 3}
   value: 1
   vel: 1
-  diffusion: 0.0001
-  viscosity: 0.1
+  diffusion: 0.1
+  viscosity: 0.001
   deltaTime: 0.1
 --- !u!114 &425477491
 MonoBehaviour:
@@ -397,7 +397,7 @@ MonoBehaviour:
   dt: 0.1
   visc: 0.001
   diffusion: 0.01
-  debug: 1
+  debug: 0
   prefab: {fileID: 1333758825}
 --- !u!114 &425477495
 MonoBehaviour:

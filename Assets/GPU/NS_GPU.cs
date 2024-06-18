@@ -40,6 +40,7 @@ public class NS_GPU : MonoBehaviour
     int xThreadGroups;
     int yThreadGroups;
 
+
     public float value = 1f;
     public float vel = 1f;
     public float diffusion = 0.0001f;
@@ -121,25 +122,136 @@ public class NS_GPU : MonoBehaviour
 
     void Update()
     {
+
+        //RenderTexture tmp = densityPrevTexture; densityPrevTexture = densityTexture; densityTexture = tmp;
+
         ChangeTexture();
 
-        Diffuse(velocityPrevTexture, velocityTexture, true, viscosity);
-        Projection();
-        Advect(velocityTexture, velocityPrevTexture, true);
-        Graphics.CopyTexture(velocityPrevTexture, velocityTexture); // Swap output to input
-        Projection();
+        /*
+                Diffuse(velocityPrevTexture, velocityTexture, true, viscosity);
+                Projection();
+                Advect(velocityTexture, velocityPrevTexture, true);
+                Graphics.CopyTexture(velocityPrevTexture, velocityTexture); // Swap output to input
+                Projection();
 
-        Diffuse(densityPrevTexture, densityTexture, false, diffusion);
-        //Graphics.CopyTexture(densityTexture, densityPrevTexture);  // Swap output to input
-        Advect(densityTexture, densityPrevTexture, false);
+                Diffuse(densityPrevTexture, densityTexture, false, diffusion);
+                //Graphics.CopyTexture(densityTexture, densityPrevTexture);  // Swap output to input
+                Advect(densityTexture, densityPrevTexture, false);
+        */
+        int groupCountX = threadGroupAmount.x;
+        int groupCountY = threadGroupAmount.y;
+        navierStokesShader.SetFloat("spread", diffusion);
+
+        Swap();
+        //diffuse velX and velY
+        navierStokesShader.SetTexture(diffusionKernel, "_Out", densityTexture);
+        navierStokesShader.SetTexture(diffusionKernel, "_In", densityPrevTexture);
+
+        navierStokesShader.SetFloat("indicator", 1);
+        navierStokesShader.Dispatch(diffusionKernel, groupCountX, groupCountY, 1);
+        Bounds(1);
+
+        navierStokesShader.SetTexture(diffusionKernel, "_Out", densityTexture);
+        navierStokesShader.SetTexture(diffusionKernel, "_In", densityPrevTexture);
+        navierStokesShader.SetFloat("indicator", 2);
+        navierStokesShader.Dispatch(diffusionKernel, groupCountX, groupCountY, 1);
+        Bounds(2);
+
+        //projection 1,2 and 3
+        navierStokesShader.SetTexture(projectionKernel, "_Out", densityTexture);
+        navierStokesShader.SetTexture(projectionKernel, "_In", densityPrevTexture);
+        navierStokesShader.Dispatch(projectionKernel, groupCountX, groupCountY, 1);
+        Bounds(1);
+        Bounds(2);
+
+        navierStokesShader.SetTexture(projection2Kernel, "_Out", densityTexture);
+        navierStokesShader.Dispatch(projection2Kernel, groupCountX, groupCountY, 1);
+        Bounds(1);
+        Bounds(2);
+
+        navierStokesShader.SetTexture(projection3Kernel, "_Out", densityTexture);
+        navierStokesShader.SetTexture(projection3Kernel, "_In", densityPrevTexture);
+        navierStokesShader.Dispatch(projection3Kernel, groupCountX, groupCountY, 1);
+        Bounds(1);
+        Bounds(2);
+        Swap();
+
+        //advection velX and velY
+        navierStokesShader.SetTexture(advectionKernel, "_Out", densityTexture);
+        navierStokesShader.SetTexture(advectionKernel, "_In", densityPrevTexture);
+        navierStokesShader.SetFloat("indicator", 1);
+        navierStokesShader.Dispatch(advectionKernel, groupCountX, groupCountY, 1);
+        Bounds(1);
+
+        navierStokesShader.SetTexture(advectionKernel, "_Out", densityTexture);
+        navierStokesShader.SetTexture(advectionKernel, "_In", densityPrevTexture);
+        navierStokesShader.SetFloat("indicator", 2);
+        navierStokesShader.Dispatch(advectionKernel, groupCountX, groupCountY, 1);
+        Bounds(2);
+
+        //projection 1, 2 and 3
+        navierStokesShader.SetTexture(projectionKernel, "_Out", densityTexture);
+        navierStokesShader.SetTexture(projectionKernel, "_In", densityPrevTexture);
+        navierStokesShader.Dispatch(projectionKernel, groupCountX, groupCountY, 1);
+        Bounds(1);
+        Bounds(2);
+
+        navierStokesShader.SetTexture(projection2Kernel, "_Out", densityTexture);
+        navierStokesShader.Dispatch(projection2Kernel, groupCountX, groupCountY, 1);
+        Bounds(1);
+        Bounds(2);
+
+        navierStokesShader.SetTexture(projection3Kernel, "_Out", densityTexture);
+        navierStokesShader.SetTexture(projection3Kernel, "_In", densityPrevTexture);
+        navierStokesShader.Dispatch(projection3Kernel, groupCountX, groupCountY, 1);
+        Bounds(1);
+        Bounds(2);
+
+        Swap();
+        //diffuse density
+        navierStokesShader.SetTexture(diffusionKernel, "_Out", densityTexture);
+        navierStokesShader.SetTexture(diffusionKernel, "_In", densityPrevTexture);
+        navierStokesShader.SetFloat("indicator", 0);
+        navierStokesShader.Dispatch(diffusionKernel, groupCountX, groupCountY, 1);
+        Bounds(0);
+
+
+        Swap();
+        //advection density
+        navierStokesShader.SetTexture(advectionKernel, "_Out", densityTexture);
+        navierStokesShader.SetTexture(advectionKernel, "_In", densityPrevTexture);
+        navierStokesShader.SetFloat("indicator", 0);
+        navierStokesShader.Dispatch(advectionKernel, groupCountX, groupCountY, 1);
+        Bounds(0);
 
 
         Renderer rend = GetComponent<Renderer>();
         rend.material = new Material(updateVerticesShader);
         //rend.material.mainTexture = densityTexture;
         rend.material.SetTexture("importTexture", densityTexture);
+        RenderTexture tmp = densityPrevTexture; densityPrevTexture = densityTexture; densityTexture = tmp;
     }
 
+    void Bounds(int indicator)
+    {
+        /*
+        int groupCountX = threadGroupAmount.x;
+        int groupCountY = threadGroupAmount.y;
+
+        navierStokesShader.SetFloat("indicator", indicator);
+
+        navierStokesShader.SetTexture(setBoundsXKernel, "_Out", densityTexture);
+        navierStokesShader.SetTexture(setBoundsXKernel, "_In", densityPrevTexture);
+        navierStokesShader.Dispatch(setBoundsXKernel, groupCountX, groupCountY, 1);
+
+        navierStokesShader.SetTexture(setBoundsYKernel, "_Out", densityTexture);
+        navierStokesShader.SetTexture(setBoundsYKernel, "_In", densityPrevTexture);
+        navierStokesShader.Dispatch(setBoundsYKernel, groupCountX, groupCountY, 1);*/
+    }
+    void Swap()
+    {
+        //RenderTexture tmp = densityPrevTexture; densityPrevTexture = densityTexture; densityTexture = tmp;
+    }
     void ChangeTexture()
     {
 
@@ -167,7 +279,8 @@ public class NS_GPU : MonoBehaviour
 
                     navierStokesShader.SetFloat("hitPosX", x);
                     navierStokesShader.SetFloat("hitPosY", y);
-                    navierStokesShader.SetTexture(addValueKernel, "Out", densityTexture);
+                    navierStokesShader.SetTexture(addValueKernel, "_Out", densityPrevTexture);
+                    //navierStokesShader.SetTexture(addValueKernel, "Velocity", densityPrevTexture);
                     navierStokesShader.Dispatch(addValueKernel, 1, 1, 1);
                 }
 
@@ -184,6 +297,7 @@ public class NS_GPU : MonoBehaviour
 
                 if (meshCollider != null && meshCollider.sharedMesh != null)
                 {
+
                     int vertexHit = GetClosestVertex(hit, triangles);
                     int x = vertexHit % planeWidth;
                     int y = vertexHit / planeWidth;
@@ -194,8 +308,7 @@ public class NS_GPU : MonoBehaviour
                     navierStokesShader.SetFloat("hitPosY", y);
                     navierStokesShader.SetFloat("xAmount", -yAmount);
                     navierStokesShader.SetFloat("yAmount", xAmount);
-
-                    navierStokesShader.SetTexture(addVelocityKernel, "Velocity", velocityPrevTexture);
+                    navierStokesShader.SetTexture(addVelocityKernel, "_Out", densityPrevTexture);
                     navierStokesShader.Dispatch(addVelocityKernel, 1, 1, 1);
 
                 }
