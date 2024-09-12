@@ -9,6 +9,7 @@ public class NavierStokes : MonoBehaviour
 
     public int nx = 10; // Number of grid cells in the x-direction
     public int ny = 10; // Number of grid cells in the y-direction
+    public Shader updateVerticesShader;
 
     public int iter = 1; //iterations of calculation of the whole thing?
     //int size;
@@ -34,14 +35,16 @@ public class NavierStokes : MonoBehaviour
     public bool debug;
     List<GameObject> pointObjects;
     public GameObject prefab;
+    private RenderTexture densityTexture;
+    private Texture2D testTexture;
 
     // Start is called before the first frame update
     void Start()
     {
-        pointObjects = new List<GameObject>();
 
         if (debug)
         {
+            pointObjects = new List<GameObject>();
             //pointObjects.Add(Instantiate(prefab, new Vector3(1 / 2, 0, 1 / 2), Quaternion.identity));
 
 
@@ -78,8 +81,8 @@ public class NavierStokes : MonoBehaviour
         {
             for (int j = 0; j < ny; j++)
             {
-                source[i, j] = 2f;
-                density[i, j] = 0f;//Random.value;
+                source[i, j] = 1f;
+                density[i, j] = 1f;//Random.value;
 
                 Vx[i, j] = 0.0f;
                 Vy[i, j] = 0.0f;
@@ -88,6 +91,15 @@ public class NavierStokes : MonoBehaviour
                 Vy0[i, j] = 0f;
             }
         }
+        testTexture = new Texture2D(nx, ny);
+        densityTexture = new RenderTexture(nx, ny, 0, RenderTextureFormat.RFloat);
+        densityTexture.enableRandomWrite = true;
+        densityTexture.Create();
+
+        /*Renderer rend = GetComponent<Renderer>();
+        rend.material = new Material(updateVerticesShader);
+        //rend.material.mainTexture = densityTexture;
+        rend.material.SetTexture("importTexture", densityTexture);*/
     }
 
 
@@ -106,97 +118,22 @@ public class NavierStokes : MonoBehaviour
 
             }
         }*/
-
-        /*if(!debug){
-
-            
-            Mesh mesh = GetComponent<MeshFilter>().mesh;
-            Vector3[] vertices = mesh.vertices;
-            int[] triangles = mesh.triangles;
-
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
-
-            Debug.Log(triangles.Length);
-            if (Input.GetMouseButton(0))
-            {
-                if (Physics.Raycast(ray, out hit))
-                {
-                    //Debug.Log(GetClosestVertex(hit, triangles));
-                    MeshCollider meshCollider = hit.collider as MeshCollider;
-                    if (meshCollider == null || meshCollider.sharedMesh == null)
-                    {
-
-                    }
-                    else
-                    {
-
-                        int vertexHit = GetClosestVertex(hit, triangles);
-                        int a = vertexHit / nx;
-                        int b = vertexHit % nx;
-                        density[a, b] += 3.0f;
-                    }
-                }
-            }
-
-            if (Input.GetMouseButton(1))
-            {
-                if (Physics.Raycast(ray, out hit))
-                {
-                    xPos = hit.point.x;
-                    yPos = hit.point.y;
-                    //Debug.Log(GetClosestVertex(hit, triangles));
-                    MeshCollider meshCollider = hit.collider as MeshCollider;
-                    
-                    if (meshCollider == null || meshCollider.sharedMesh == null)
-                    {
-                    }
-                    else
-                    {
-
-                        int vertexHit = GetClosestVertex(hit, triangles);
-                        int a = vertexHit / nx;
-                        int b = vertexHit % nx;
-                        for(int i = -1; i < 1; i++){
-                            for(int j = -1; j < 1; j++){
-                                Vx[a + i, b + j] += 1.0f*(xPos - prevX);
-                                Vy[a + i, b + j] += 1.0f*(yPos - prevY);
-                            }
-                        }
-                    }
-                }
-            }
-        }*/
-
-        //mixing and spreading out. 1: left and right edge, 2: top and bottom edge
-        diffuse(1, Vx0, Vx, visc);
-        diffuse(2, Vy0, Vy, visc);
-
-        //sets the boxes to equilibrium, has to be incompressible
-        project(Vx0, Vy0, Vx, Vy);
-
-        //moves dye from velocity. 1: left and right edge, 2: top and bottom edge
-        advect(1, Vx, Vx0, Vx0, Vy0);
-        advect(2, Vy, Vy0, Vx0, Vy0);
-
-        //sets the boxes to equilibrium, has to be incompressible
-        project(Vx, Vy, Vx0, Vy0);
-
-        //mixing and spreading out. 0: not att edge
-        diffuse(0, source, density, diffusion);
-
-        //moves dye from velocity. 0: not att edge
-        advect(0, density, source, Vx, Vy);
-
-
         xPos = -Input.mousePosition.y;
         yPos = Input.mousePosition.x;
+
+        Mesh mesh = GetComponent<MeshFilter>().mesh;
+        Vector3[] vertices = mesh.vertices;
+        int[] triangles = mesh.triangles;
+
+
+
 
 
 
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
         RaycastHit hit;
 
+        //Debug.Log(triangles.Length);
         if (Input.GetMouseButton(0))
         {
             if (Physics.Raycast(ray, out hit))
@@ -205,43 +142,175 @@ public class NavierStokes : MonoBehaviour
                 MeshCollider meshCollider = hit.collider as MeshCollider;
                 if (meshCollider != null && meshCollider.sharedMesh != null)
                 {
-                    int test = 0;
-                    string name = meshCollider.gameObject.transform.parent.ToString();
-                    int nameLength = name.Length;
-                    name = name.Replace(" (UnityEngine.Transform)", "");
-                    bool suceed = int.TryParse(name, out test);
-                    if (suceed)
+
+                    int vertexHit = GetClosestVertex(hit, triangles);
+                    int a = vertexHit / nx;
+                    int b = vertexHit % nx;
+                    density[a, b] += 3.0f;
+                }
+            }
+        }
+        float xAmount;// = xPos - prevX;
+        float yAmount;// = yPos - prevY;
+        if (Input.GetMouseButton(1))
+        {
+            if (Physics.Raycast(ray, out hit))
+            {
+                xPos = hit.point.x;
+                yPos = hit.point.y;
+                //Debug.Log(GetClosestVertex(hit, triangles));
+                MeshCollider meshCollider = hit.collider as MeshCollider;
+
+                if (meshCollider != null && meshCollider.sharedMesh != null)
+                {
+
+                    int vertexHit = GetClosestVertex(hit, triangles);
+                    int a = vertexHit / nx;
+                    int b = vertexHit % nx;
+
+
+
+                    float sigma = 2f;
+                    float mult = 1f;
+                    int radius = 3;
+                    if (a > radius && a < nx - radius && b > radius && b < ny - radius)
                     {
-                        int a = test / nx;
-                        int b = test % nx;
-                        density[a, b] += 3.0f;
+                        for (int i = 0; i < radius; i++)
+                        {
+                            for (int j = 0; j < radius; j++)
+                            {
+
+                                //xAmount = mult * (Mathf.Exp(-((i - 0) * (i - 0)) / (2 * sigma * sigma)) - 0.5f);
+                                //yAmount = mult * (Mathf.Exp(-((j - 0) * (j - 0)) / (2 * sigma * sigma)) - 0.5f);
+                                xAmount = Mathf.Atan(i - 1);
+                                yAmount = Mathf.Atan(j - 1);
+                                Vx0[a + i - 1, b + j - 1] += xAmount;
+                                Vy0[a + i - 1, b + j - 1] += yAmount;
+                                //Debug.Log("MIDDLE" + (a) + " " + (b));
+                                //Debug.Log((a + i - 1) + ", " + (b + j - 1) + ": " + xAmount + ", " + yAmount);
+                            }
+                        }
                     }
                 }
             }
         }
-        /*if (Input.GetMouseButton(1))
-        {
-            if (Physics.Raycast(ray, out hit))
-            {
-                //Debug.Log(GetClosestVertex(hit, triangles));
-                MeshCollider meshCollider = hit.collider as MeshCollider;
-                if (meshCollider != null && meshCollider.sharedMesh != null)
+
+
+
+
+        //mixing and spreading velocities out. 1: left and right edge, 2: top and bottom edge
+        diffuse(1, Vx0, Vx, visc);
+        diffuse(2, Vy0, Vy, visc);
+
+        //sets the boxes to equilibrium, has to be incompressible
+        project(Vx0, Vy0, Vx, Vy);
+
+        //moves velocity from velocity. 1: left and right edge, 2: top and bottom edge
+        advect(1, Vx, Vx0, Vx0, Vy0);
+        advect(2, Vy, Vy0, Vx0, Vy0);
+
+        //sets the boxes to equilibrium, has to be incompressible
+        project(Vx, Vy, Vx0, Vy0);
+
+
+
+
+        //mixing and spreading out. 0: not att edge
+        diffuse(0, source, density, diffusion);
+        //diffuse(0, density, source, diffusion);
+
+        //moves dye from velocity. 0: not att edge
+        advect(0, density, source, Vx, Vy);
+
+
+        /*
+                for (int y = 0; y < ny; y++)
                 {
-                    int test = 0;
-                    string name = meshCollider.gameObject.transform.parent.ToString();
-                    int nameLength = name.Length;
-                    name = name.Replace(" (UnityEngine.Transform)", "");
-                    bool suceed = int.TryParse(name, out test);
-                    if(suceed){
-                        int a = test / nx;
-                        int b = test % nx;
-                        Vx[a,b] = xPos-prevX;
-                        Vy[a,b] = yPos-prevY;
+                    for (int x = 0; x < nx; x++)
+                    {
+                        float value = density[x, y];
+                        Color color = new Color(1, 1, 1, 1);
+                        testTexture.SetPixel(x, y, Color.white);// + new Color(value, value, value, 0));
                     }
                 }
-            }
-        }*/
 
+                testTexture.Apply();
+
+                Graphics.Blit(testTexture, densityTexture);
+        */
+        //Debug.Log(testTexture.GetPixel(0, 0));
+        float[,] velocityMagnitude = calculateVelocityMagnitudeForVisualization(Vx, Vy);
+        for (int i = 0; i < nx; i++)
+        {
+            for (int j = 0; j < ny; j++)
+            {
+                vertices[i * nx + j].y = velocityMagnitude[i, j];// * density[i, j];
+                mesh.vertices = vertices;
+                mesh.RecalculateNormals();
+            }
+        }
+
+        prevX = xPos;
+        prevY = yPos;
+
+        /*Vx = density;
+        density = source;
+        source = Vx;*/
+
+
+
+        /*
+                if (debug)
+                {
+                    Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+                    RaycastHit hit;
+
+                    if (Input.GetMouseButton(0))
+                    {
+                        if (Physics.Raycast(ray, out hit))
+                        {
+                            //Debug.Log(GetClosestVertex(hit, triangles));
+                            MeshCollider meshCollider = hit.collider as MeshCollider;
+                            if (meshCollider != null && meshCollider.sharedMesh != null)
+                            {
+                                int test = 0;
+                                string name = meshCollider.gameObject.transform.parent.ToString();
+                                int nameLength = name.Length;
+                                name = name.Replace(" (UnityEngine.Transform)", "");
+                                bool suceed = int.TryParse(name, out test);
+                                if (suceed)
+                                {
+                                    int a = test / nx;
+                                    int b = test % nx;
+                                    density[a, b] += 3.0f;
+                                }
+                            }
+                        }
+                    }
+                    /*if (Input.GetMouseButton(1))
+                    {
+                        if (Physics.Raycast(ray, out hit))
+                        {
+                            //Debug.Log(GetClosestVertex(hit, triangles));
+                            MeshCollider meshCollider = hit.collider as MeshCollider;
+                            if (meshCollider != null && meshCollider.sharedMesh != null)
+                            {
+                                int test = 0;
+                                string name = meshCollider.gameObject.transform.parent.ToString();
+                                int nameLength = name.Length;
+                                name = name.Replace(" (UnityEngine.Transform)", "");
+                                bool suceed = int.TryParse(name, out test);
+                                if(suceed){
+                                    int a = test / nx;
+                                    int b = test % nx;
+                                    Vx[a,b] = xPos-prevX;
+                                    Vy[a,b] = yPos-prevY;
+                                }
+                            }
+                        }
+                    }*/
+        //}
+        /*
         Vector3 Pos;
         for (var i = 0; i < nx; i++)
         {
@@ -253,14 +322,8 @@ public class NavierStokes : MonoBehaviour
                 Triangle.transform.eulerAngles = new Vector3(0, getVelocity(i, j) * 180f / 3.14f, 0);
             }
         }
-        /*
-            int a = i / nx;
-            int b = i % nx;
-            vertices[i].y = source[a, b];
-        mesh.vertices = vertices;
-        mesh.RecalculateNormals();*/
-        prevX = xPos;
-        prevY = yPos;
+    */
+
     }
 
 
@@ -283,8 +346,10 @@ public class NavierStokes : MonoBehaviour
     }
 
     //sets the boxes to equilibrium, incompressible
-    public void project(float[,] velocX, float[,] velocY, float[,] p, float[,] div)
+    public void project(float[,] velocX, float[,] velocY, float[,] p1, float[,] div1)
     {
+        float[,] p = new float[nx, ny];
+        float[,] div = new float[nx, ny];
         for (int i = 1; i < nx - 1; i++)
         {
             for (int j = 1; j < ny - 1; j++)
@@ -338,8 +403,11 @@ public class NavierStokes : MonoBehaviour
             {
                 tmp1 = dtx * velocX[i, j];
                 tmp2 = dty * velocY[i, j];
+
+                //x, y is the backtracked positions
                 x = ifloat - tmp1;
                 y = jfloat - tmp2;
+
 
                 if (x < 0.5) x = 0.5f;
                 if (x > nxFloat + 0.5) x = nxFloat + 0.5f;
@@ -364,6 +432,8 @@ public class NavierStokes : MonoBehaviour
                 d[i, j] =
                   s0 * (t0 * d0[i0i, j0i] + t1 * d0[i0i, j1i]) +
                   s1 * (t0 * d0[i1i, j0i] + t1 * d0[i1i, j1i]);
+
+                //if (velocX[i, j] > 1) Debug.Log(d[i, j]);
             }
         }
 
@@ -414,11 +484,10 @@ public class NavierStokes : MonoBehaviour
             }
         }
 
-        x[0, 0] = 0.5f * (x[1, 0] + x[0, 1]);
-        x[0, ny - 1] = 0.5f * (x[1, ny - 1] + x[0, ny - 2]);
-        x[nx - 1, 0] = 0.5f * (x[nx - 2, 0] + x[nx - 1, 1]);
-        x[nx - 1, ny - 1] = 0.5f * (x[nx - 2, ny - 1] + x[nx - 1, ny - 2]);
-        //x[IX(0, N - 1, N)] = 1000f; //y,x,N
+        x[0, 0] = 1;//-0.5f * (x[1, 0] + x[0, 1]);
+        x[0, ny - 1] = 1;//-0.5f * (x[1, ny - 1] + x[0, ny - 2]);
+        x[nx - 1, 0] = 1;//-0.5f * (x[nx - 2, 0] + x[nx - 1, 1]);
+        x[nx - 1, ny - 1] = 1;//-0.5f * (x[nx - 2, ny - 1] + x[nx - 1, ny - 2]);
     }
 
     public float getVelocity(int i, int j)
@@ -431,7 +500,6 @@ public class NavierStokes : MonoBehaviour
         {
             dir = Mathf.Atan(y / (x + 0.00000001f));
         }
-
 
         return dir;
     }
@@ -456,4 +524,40 @@ public class NavierStokes : MonoBehaviour
             return aTriangles[index + 2]; // z
     }
 
+    // Method to calculate and normalize velocity magnitude for visualization
+    public float[,] calculateVelocityMagnitudeForVisualization(float[,] velocX, float[,] velocY)
+    {
+        int nx = velocX.GetLength(0);
+        int ny = velocX.GetLength(1);
+        float[,] velocityMagnitude = new float[nx, ny];
+        float maxMagnitude = 0.0f;
+
+        // Calculate velocity magnitude
+        for (int i = 0; i < nx; i++)
+        {
+            for (int j = 0; j < ny; j++)
+            {
+                float magnitude = Mathf.Sqrt(velocX[i, j] * velocX[i, j] + velocY[i, j] * velocY[i, j]);
+                velocityMagnitude[i, j] = magnitude;
+                if (magnitude > maxMagnitude)
+                {
+                    maxMagnitude = magnitude;
+                }
+            }
+        }
+
+        // Normalize magnitudes to [0, 1]
+        if (maxMagnitude > 0)
+        {
+            for (int i = 0; i < nx; i++)
+            {
+                for (int j = 0; j < ny; j++)
+                {
+                    velocityMagnitude[i, j] /= maxMagnitude;
+                }
+            }
+        }
+
+        return velocityMagnitude;
+    }
 }

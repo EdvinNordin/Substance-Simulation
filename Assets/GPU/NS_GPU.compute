@@ -1,350 +1,165 @@
 // FluidSimulation.compute
 
-#pragma kernel Advection
 #pragma kernel Diffusion
-#pragma kernel Projection
+#pragma kernel Advection
+#pragma kernel Projection1
 #pragma kernel Projection2
 #pragma kernel Projection3
-#pragma kernel SetBoundsX
-#pragma kernel SetBoundsY
+#pragma kernel SetBounds
+#pragma kernel TextureSet
 #pragma kernel AddValue
 #pragma kernel AddVelocity
-
-#define zero 0.0f
-float spread;
-float dt;
 
 uint Width;
 uint Height;
 
-int Channel;
+int indicator;
+int value;
+int velocity;
 
+float dt;
+float spread;
 float hitPosX;
 float hitPosY;
-
 float xAmount;
 float yAmount;
 
-float value;
-float vel;
 
 Texture2D<float4> _In;  // Input Texture
 RWTexture2D<float4> _Out;  // Output Texture
-RWTexture2D<float4> Velocity;  // Velocity Texture
-RWTexture2D<float4> Pressure;  // Pressure Texture
-Texture2D<float4> PressurePrev;  // Previous Pressure Texture
-RWTexture2D<float4> Divergence;  // Divergence Texture
-/*
-[numthreads(8, 8, 1)]
-void Advection(int2 id : SV_DispatchThreadID)
-{
-    float2 dt0 = dt * (float2(Width-2.0f, Height-2.0f));
-	float2 vec = float2(id) - dt0 * float2(Velocity[id].x, Velocity[id].y);
-	vec = clamp(vec.xy, 0.5, (float2(Width-2.0f, Height-2.0f)) + 0.5);
-
-	int2 xy0 = (int2) vec.xy;
-	int2 xy1 = xy0 + 1;
-
-	float2 st1 = vec.xy - xy0;
-	float2 st0 = 1 - st1;
-
-    float2 testOut;
-
-    
-	testOut = 
-		st0.x * (st0.y * In[xy0] + st1.y * In[int2(xy0.x, xy1.y)]) +
-		st1.x * (st0.y * In[int2(xy1.x, xy0.y)] + st1.y * In[xy1]);
-    
-    Out[id] = float4(testOut.x, testOut.y, zero, zero);
-    /*Out[id].y = testOut.y;
-    Out[id].z = zero;
-    Out[id].w = zero;*/
-/*
-}
+RWTexture2D<float4> _Temp;  // Velocity Texture
 
 [numthreads(8, 8, 1)]
 void Diffusion(int2 id : SV_DispatchThreadID)
 {
-    float a = dt * spread * (Width - 2) * (Height - 2);
-
-    float2 testOut;
-    testOut =
-            (In[id] + a * (Out[id + int2(1, 0)] + Out[id + int2(-1, 0)] + 
-            Out[id + int2(0, 1)] + Out[id + int2(0, -1)])) / (1 + 4 * a);
-    
-    
-            Out[id] = float4(testOut.x, testOut.y, zero, zero);
-}
-
-[numthreads(8, 8, 1)]
-void Projection(int2 id : SV_DispatchThreadID) 
-{
-    float2 testOut;
-    testOut = -0.5f *
-                    ((Velocity[int2(id.x+1, id.y)].x -
-                      Velocity[int2(id.x-1, id.y)].x)/Width +
-                      (Velocity[int2(id.x, id.y+1)].y -
-                      Velocity[int2(id.x, id.y-1)].y)/ 
-                      Height);
-                      Divergence[id] = float4(testOut.x, testOut.y, zero, zero);
-                      
-        
-    Pressure[int2(id)] = float4(zero, zero, zero, zero);
-    
-}
-
-[numthreads(8, 8, 1)]
-void Projection2(int2 id : SV_DispatchThreadID) 
-{
-    float2 testOut;
-    testOut = 
-                (Divergence[id] + (PressurePrev[id + int2(1, 0)] + PressurePrev[id + int2(-1, 0)] + 
-                PressurePrev[id + int2(0, 1)] + PressurePrev[id + int2(0, -1)])) / 4;
-                Pressure[id] = float4(testOut.x, testOut.y, zero, zero);
-                      
-}
-
-[numthreads(8, 8, 1)]
-void Projection3(int2 id : SV_DispatchThreadID) 
-{
-    float2 testOut;
-    float2 newVelocity;
-    newVelocity.x = Velocity[id].x - 0.5f * (PressurePrev[int2(id.x+1, id.y)] - PressurePrev[int2(id.x-1, id.y)]) * (Width);
-    newVelocity.y = Velocity[id].y - 0.5f * (PressurePrev[int2(id.x, id.y+1)] - PressurePrev[int2(id.x, id.y-1)]) * (Height);
-    testOut = newVelocity;
-
-    Velocity[id] = float4(testOut.x, testOut.y, zero, zero);
-                      
-
-}
-
-[numthreads(16, 1, 1)]
-void SetBoundsX(int id : SV_DispatchThreadID)
-{
-    float2 testOut;
-    if (id.x < Width/2){
-        Out[float2(0, id.x)] = -In[float2(1, id.x)];
-    }
-    else{
-        Out[int2(Width-1, id.x-Width/2)] = -In[int2(Width-2, id.x-Width/2)];
-    }
-}
-
-[numthreads(16, 1, 1)]
-void SetBoundsY(int id : SV_DispatchThreadID)
-{
-    if (id.x < Height/2){
-        Out[int2(id.x, 0)] = -In[int2(id.x, 1)];
-    }
-    else{
-        Out[int2(id.x-Height/2, Height-1)] = -In[int2(id.x-Height/2, Height-2)];
-    }
-}
-
-[numthreads(1, 1, 1)]
-void AddValue(int2 id : SV_DispatchThreadID)
-{
-	Out[int2(hitPosX, hitPosY)] += 1.0f * value;
-}
-
-[numthreads(4, 4, 1)]
-void AddVelocity(int2 id : SV_DispatchThreadID)
-{
-    float scale = vel;
-	//Velocity[int2(hitPosX+id.x-2, hitPosY+id.y-2)] += float2(xAmount * scale, yAmount * scale);
-}
-*/
-
-
-int indicator;
-[numthreads(8, 8, 1)]
-void Advection(int2 id : SV_DispatchThreadID)
-{
-	   
-    Width = Width - 2;
-    Height = Height - 2;
-	float x = id.x - dt * Width * _Out[id].y;// - (0.00001 * (Width - 2) * _VelocityX[id]);
-	float y = id.y - dt * Height * _Out[id].z;// - (0.00001 * (Height - 2) * _VelocityY[id]);
-
-	if (x < 0.5f) x = 0.5f;
-	if (x > Width + 0.5f) x = Width + 0.5f;
-	int i0 = (int)x;
-	int i1 = i0 + 1;
-
-	if (y < 0.5f) y = 0.5f;
-	if (y > Height + 0.5f) y = Height + 0.5f;
-	int j0 = (int)y;
-	int j1 = j0 + 1;
-
-	float s1 = x - i0;
-	float s0 = 1.0f - s1;
-	float t1 = y - j0;
-	float t0 = 1.0f - t1;
-
-    int i0i = (int)i0;
-    int i1i = (int)i1;
-    int j0i = (int)j0;
-    int j1i = (int)j1;
-    _Out[id] = float4(s0 * (t0 * _In[int2(i0i, j0i)].x + t1 * _In[int2(i0i, j1i)].x) +
-    s1 * (t0 * _In[int2(i1i, j0i)].x + t1 * _In[int2(i1i, j1i)].x), _Out[id].yzw);
-
-	/*if(indicator == 0){
-		_Out[id] = float4(s0 * (t0 * _In[int2(i0i, j0i)].x + t1 * _In[int2(i0i, j1i)].x) +
-						  s1 * (t0 * _In[int2(i1i, j0i)].x + t1 * _In[int2(i1i, j1i)].x), _Out[id].yzw);
-	}
-	else if (indicator == 1)
-	{
-		_Out[id] = float4(_Out[id].x, s0 * (t0 * _In[int2(i0i, j0i)].x + t1 * _In[int2(i0i, j1i)].x) +
-						  s1 * (t0 * _In[int2(i1i, j0i)].x + t1 * _In[int2(i1i, j1i)].x), _Out[id].zw);
-	}else if (indicator == 2)
-	{
-		_Out[id] = float4(_Out[id].xy, s0 * (t0 * _In[int2(i0i, j0i)].x + t1 * _In[int2(i0i, j1i)].x) +
-						  s1 * (t0 * _In[int2(i1i, j0i)].x + t1 * _In[int2(i1i, j1i)].x), _Out[id].w);
-	}
-	*/
-
-}
-
-[numthreads(8, 8, 1)]
-void Diffusion(int2 id : SV_DispatchThreadID)
-{
-
-	
     float a = dt * spread * (Width - 2) * (Height - 2);
    
 	if (indicator == 0){
-	_Out[id] = float4(
-            (_In[id].x + a * (_Out[id + int2(1, 0)].x + _Out[id + int2(-1, 0)].x + 
-            _Out[id + int2(0, 1)].x + _Out[id + int2(0, -1)].x)) / (1 + 4 * a), _Out[id].yzw);
+        _Temp[id] = float4(
+        (_In[id].r + a * (_Out[id + int2(1, 0)].r + _Out[id + int2(-1, 0)].r + 
+        _Out[id + int2(0, 1)].r + _Out[id + int2(0, -1)].r)) / (1 + 4 * a), _Out[id].gba);
 	}
 	else if (indicator == 1){
-	_Out[id] = float4(_Out[id].x,
-			(_In[id].y + a * (_Out[id + int2(1, 0)].y + _Out[id + int2(-1, 0)].y + 
-			_Out[id + int2(0, 1)].y + _Out[id + int2(0, -1)].y)) / (1 + 4 * a), _Out[id].zw);
+        _Temp[id] = float4(_Out[id].r,
+			(_In[id].g + a * (_Out[id + int2(1, 0)].g + _Out[id + int2(-1, 0)].g + 
+			_Out[id + int2(0, 1)].g + _Out[id + int2(0, -1)].g)) / (1 + 4 * a), _Out[id].ba);
 	}
 	else if (indicator == 2){
-	_Out[id] = float4(_Out[id].xy,
-			(_In[id].z + a * (_Out[id + int2(1, 0)].z + _Out[id + int2(-1, 0)].z + 
-			_Out[id + int2(0, 1)].z + _Out[id + int2(0, -1)].z)) / (1 + 4 * a), _Out[id].w);
+        _Temp[id] = float4(_Out[id].rg,
+			(_In[id].b + a * (_Out[id + int2(1, 0)].b + _Out[id + int2(-1, 0)].b + 
+			_Out[id + int2(0, 1)].b + _Out[id + int2(0, -1)].b)) / (1 + 4 * a), _Out[id].a);
 	}
 }
 
+[numthreads(8, 8, 1)]
+void Advection(int2 id : SV_DispatchThreadID)
+{
+
+    //backwards trace the velocity field
+    float2 dtScaled = dt * (float2(Width-2.0f, Height-2.0f)); //scaled dt by texture size
+	float2 backtrace = float2(id) - dtScaled * float2(_In[id].g, _In[id].b); //traced position backwards in time
+	//float2 backtrace = float2(id) - dtScaled * float2(_Out[id].y, _Out[id].z);
+	backtrace = clamp(backtrace, 0.5, (float2(Width-2.0f, Height-2.0f)) + 0.5); //clamp the traced position to the texture size
+
+	int2 backtraceInt = (int2) backtrace; //get the integer part of the traced position
+	int2 backtraceIntNext = backtraceInt + 1; //get the next integer part of the traced position
+
+	float2 weightNE = backtrace - backtraceInt; //get the north east weight of the traced position which is the fractional part of the traced position
+	float2 weightSW = 1 - weightNE; //get the south west weight of the traced position which is 1 - the fractional part of the traced position
+
+    //interpolate the traced position using the weights and the values of the traced position and the next position
+    if(indicator == 0){
+		_Out[id] = float4(
+            weightSW.x * (weightSW.y * _In[backtraceInt].r + weightNE.y * _In[int2(backtraceInt.x, backtraceIntNext.y)].r) +
+		    weightNE.x * (weightSW.y * _In[int2(backtraceIntNext.x, backtraceInt.y)].r + weightNE.y * _In[backtraceIntNext].r), 
+            _Out[id].gba);
+	}
+	else if (indicator == 1)
+	{
+		_Out[id] = float4(_Out[id].r, 
+            weightSW.x * (weightSW.y * _In[backtraceInt].r + weightNE.y * _In[int2(backtraceInt.x, backtraceIntNext.y)].r) +
+		    weightNE.x * (weightSW.y * _In[int2(backtraceIntNext.x, backtraceInt.y)].r + weightNE.y * _In[backtraceIntNext].r), 
+            _Out[id].ba);
+	}
+    else if (indicator == 2)
+	{
+		_Out[id] = float4(_Out[id].rg, 
+            weightSW.x * (weightSW.y * _In[backtraceInt].r + weightNE.y * _In[int2(backtraceInt.x, backtraceIntNext.y)].r) +
+		    weightNE.x * (weightSW.y * _In[int2(backtraceIntNext.x, backtraceInt.y)].r + weightNE.y * _In[backtraceIntNext].r), 
+            _Out[id].a);
+	}
+}
 
 [numthreads(8, 8, 1)]
-void Projection(int2 id : SV_DispatchThreadID) 
+void Projection1(int2 id : SV_DispatchThreadID) 
 {
-	
-	
-	//pressure = 0
-    _Out[id] = float4(_Out[id].x, 0, -0.5f *
-                    ((_In[int2(id.x+1, id.y)].y -
-                      _In[int2(id.x-1, id.y)]).y/Width +
-                      (_In[int2(id.x, id.y+1)].z -
-                      _In[int2(id.x, id.y-1)]).z/ 
-                      Height), _Out[id].w);
-    //_Out[id].y = 0;
-    
+	//Out.y = pressure = 0
+    //Out.z = divergence =>
+    _Temp[id] = float4(_Out[id].r, 0, -0.5f *
+                    ((_In[int2(id.x+1, id.y)].g -
+                      _In[int2(id.x-1, id.y)].g)/Width +
+                      (_In[int2(id.x, id.y+1)].b -
+                      _In[int2(id.x, id.y-1)].b)/ 
+                      Height), _Out[id].a);
 }
+
 [numthreads(8, 8, 1)]
 void Projection2(int2 id : SV_DispatchThreadID) 
 {
-	
-    
-    _Out[id] = float4(_Out[id].x,
-                (_Out[id].z + (_Out[id + int2(1, 0)].y + _Out[id + int2(-1, 0)].y + 
-                _Out[id + int2(0, 1)].y + _Out[id + int2(0, -1)].y)) / 4 , _Out[id].zw);
+    _Temp[id] = float4(_Out[id].r,
+                (_Out[id].b + (_Out[int2(id.x+1, id.y)].g + _Out[int2(id.x-1, id.y)].g + 
+                _Out[int2(id.x, id.y+1)].g + _Out[int2(id.x, id.y-1)].g)) / 4 , _Out[id].ba);
 }
+
 [numthreads(8, 8, 1)]
 void Projection3(int2 id : SV_DispatchThreadID) 
 {
-	
-    
-    _Out[id] = float4(_Out[id].x, 
-					_In[id].y - 0.5f * (_Out[int2(id.x+1, id.y)].y - _Out[int2(id.x-1, id.y)].y) * (Width),
-    				_In[id].z - 0.5f * (_Out[int2(id.x, id.y+1)].y - _Out[int2(id.x, id.y-1)].y) * (Height), 
-					_Out[id].w);
-   
+    _Temp[id] = float4(_Out[id].r, 
+					_In[id].g - 0.5f * (_Out[int2(id.x+1, id.y)].g - _Out[int2(id.x-1, id.y)].g) * (Width),
+    				_In[id].b - 0.5f * (_Out[int2(id.x, id.y+1)].g - _Out[int2(id.x, id.y-1)].g) * (Height), 
+					_Out[id].z);
 }
 
-
-[numthreads(8, 1, 1)]
-void SetBoundsX(int id : SV_DispatchThreadID)
+[numthreads(8, 8, 1)]
+void SetBounds(int2 id : SV_DispatchThreadID)
 {
-	if(indicator == 0){
-        if (id.x < Width/2){
-            _Out[int2(0, id.x)] = float4(-_In[int2(1, id.x)].x, _Out[int2(0, id.x)].yzw);
-        }
-        else{
-            _Out[int2(Width-1, id.x-Width/2)] = float4(-_In[int2(Width-2, id.x-Width/2)].x, _Out[int2(Width-1, id.x-Width/2)].yzw);
+    if(id.x < Width && id.y == 0){ //bottom
+        if(_In[int2(id.x, 0)].b < 0){ //if velocity is downwards
+            _Out[int2(id.x, 0)] = float4(_Out[int2(id.x, 0)].rg, -_In[int2(id.x, 0)].b, _Out[int2(id.x, 0)].a);
         }
     }
-    else if (indicator == 1){
-        if (id.x < Width/2){
-            _Out[int2(0, id.x)] = float4(_Out[int2(0, id.x)].x, -_In[int2(1, id.x)].y, _Out[int2(0, id.x)].zw);
-        }
-        else{
-            _Out[int2(Width-1, id.x-Width/2)] = float4(_Out[int2(Width-1, id.x-Width/2)].x, -_In[int2(Width-2, id.x-Width/2)].y, _Out[int2(Width-1, id.x-Width/2)].zw);
+    else if(id.x < Width && id.y == Height-1){ //top
+        if(_In[int2(id.x, Height-1)].b > 0){ //if velocity is upwards
+            _Out[int2(id.x, Height-1)] = float4(_Out[int2(id.x, Height-1)].rg, -_In[int2(id.x, Height-1)].b, _Out[int2(id.x, Height-1)].a);
         }
     }
-    else if (indicator == 2){
-        if (id.x < Width/2){
-            _Out[int2(0, id.x)] = float4(_Out[int2(0, id.x)].xy, -_In[int2(1, id.x)].z, _Out[int2(0, id.x)].w);
-        }
-        else{
-            _Out[int2(Width-1, id.x-Width/2)] = float4(_Out[int2(Width-1, id.x-Width/2)].xy, -_In[int2(Width-2, id.x-Width/2)].z, _Out[int2(Width-1, id.x-Width/2)].w);
+
+    if(id.x == 0 && id.y < Height){ //left
+        if(_In[int2(0, id.y)].g < 0){ //if velocity is left
+            _Out[int2(0, id.y)] = float4(_Out[int2(0, id.y)].r, -_In[int2(0, id.y)].g, _Out[int2(0, id.y)].ba);
         }
     }
-    
+    else if(id.x == Width-1 && id.y < Height){ //right
+        if(_In[int2(Width-1, id.y)].y > 0){ //if velocity is right
+            _Out[int2(Width-1, id.y)] = float4(_Out[int2(Width-1, id.y)].r, -_In[int2(Width-1, id.y)].g, _Out[int2(Width-1, id.y)].ba);
+        }
+    }   
 }
-[numthreads(8, 1, 1)]
-void SetBoundsY(int id : SV_DispatchThreadID)
-{
 
-    if(indicator  == 0){
-        if (id.x < Height/2){
-            _Out[int2(id.x, 0)] = float4(_Out[int2(id.x, 0)].x, -_In[int2(id.x, 1)].x, _Out[int2(id.x, 0)].zw);
-        }
-        else{
-            _Out[int2(id.x-Height/2, Height-1)] = float4(_Out[int2(id.x-Height/2, Height-1)].x, -_In[int2(id.x-Height/2, Height-2)].x, _Out[int2(id.x-Height/2, Height-1)].zw);
-        }
-    }
-    else if (indicator == 1){
-        if (id.x < Height/2){
-            _Out[int2(id.x, 0)] = float4(_Out[int2(id.x, 0)].xy, -_In[int2(id.x, 1)].y, _Out[int2(id.x, 0)].w);
-        }
-        else{
-            _Out[int2(id.x-Height/2, Height-1)] = float4(_Out[int2(id.x-Height/2, Height-1)].xy, -_In[int2(id.x-Height/2, Height-2)].y, _Out[int2(id.x-Height/2, Height-1)].w);
-        }
-    }
-    else if (indicator == 2){
-        if (id.x < Height/2){
-            _Out[int2(id.x, 0)] = float4(_Out[int2(id.x, 0)].xyz, -_In[int2(id.x, 1)].z);
-        }
-        else{
-            _Out[int2(id.x-Height/2, Height-1)] = float4(_Out[int2(id.x-Height/2, Height-1)].xyz, -_In[int2(id.x-Height/2, Height-2)].z);
-        }
-    
-    }
+[numthreads(8, 8, 1)]
+void TextureSet(int2 id : SV_DispatchThreadID)
+{
+    _Out[id] = float4(_In[id]);
 }
 
 [numthreads(1, 1, 1)]
 void AddValue(int2 id : SV_DispatchThreadID)
 {
-	_Out[int2(hitPosX, hitPosY)] = float4(_Out[int2(hitPosX, hitPosY)].x + 1, _Out[int2(hitPosX, hitPosY)].yzw);
-	//Velocity[int2(hitPosX, hitPosY)] = float4(Velocity[int2(hitPosX, hitPosY)].x + 1.0f, Velocity[int2(hitPosX, hitPosY)].yzw);
+	_Out[int2(hitPosX, hitPosY)] = float4(_Out[int2(hitPosX, hitPosY)].r + value, _Out[int2(hitPosX, hitPosY)].gba);
 }
+
 [numthreads(1, 1, 1)]
 void AddVelocity(int2 id : SV_DispatchThreadID)
 {
-    _Out[int2(hitPosX, hitPosY)] = float4(_Out[int2(hitPosX, hitPosY)].x, _Out[int2(hitPosX, hitPosY)].y+xAmount, _Out[int2(hitPosX, hitPosY)].z+yAmount, _Out[int2(hitPosX, hitPosY)].w);
-    //_Out[int2(hitPosX, hitPosY)] = float4(_Out[int2(hitPosX, hitPosY)].x, 10, 10, _Out[int2(hitPosX, hitPosY)].w);
+    _Out[int2(hitPosX, hitPosY)] = float4(_Out[int2(hitPosX, hitPosY)].r, _Out[int2(hitPosX, hitPosY)].g + velocity, _Out[int2(hitPosX, hitPosY)].b + velocity, _Out[int2(hitPosX, hitPosY)].a);
 }
-
-/*
-numthreads(8, 8, 1)
-void Swap(int2 id : SV_DispatchThreadID)
-{
-    float4 temp = _In[id];
-    _In[id] = _Out[id];
-    _Out[id] = temp;
-}*/
