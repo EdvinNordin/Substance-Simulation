@@ -21,17 +21,20 @@ public class LBM_GPU : MonoBehaviour
     private RenderTexture fTexture;
     private RenderTexture fnewTexture;
     private RenderTexture feqTexture;
-    private RenderTexture rhoTexture;    
-    private RenderTexture inRhoTexture;    
+    private RenderTexture rhoTexture;
+    private RenderTexture inRhoTexture;
     private RenderTexture velTexture;
     private RenderTexture tempVelTexture;
     private RenderTexture latticeTexture;
+    private RenderTexture densityTexture;
+    private RenderTexture densityPrevTexture;
+    private RenderTexture tempTexture;
 
-    float[] lattice = { -1.0f, 0.0f, 1.0f, -1.0f, 0.0f, 1.0f, -1.0f, 0.0f, 1.0f,  
-                        1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f, -1.0f, -1.0f,  
+    float[] lattice = { -1.0f, 0.0f, 1.0f, -1.0f, 0.0f, 1.0f, -1.0f, 0.0f, 1.0f,
+                        1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f, -1.0f, -1.0f,
                         1.0f / 36.0f, 1.0f / 9.0f, 1.0f / 36.0f, 1.0f / 9.0f, 4.0f / 9.0f, 1.0f / 9.0f, 1.0f / 36.0f, 1.0f / 9.0f, 1.0f / 36.0f };
-                        
-//NW N NE E SE S SW W C 
+
+    //NW N NE E SE S SW W C 
     /*float[] lattice = { -1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, -1.0f, -1.0f, 0.0f,  
                         1.0f, 1.0f, 1.0f, 0.0f, -1.0f, -1.0f, -1.0f, 0.0f, 0.0f,  
                         1.0f / 36.0f, 1.0f / 9.0f, 1.0f / 36.0f, 1.0f / 9.0f, 1.0f / 36.0f, 1.0f / 9.0f, 1.0f / 36.0f, 1.0f / 9.0f, 4.0f / 9.0f };
@@ -40,7 +43,7 @@ public class LBM_GPU : MonoBehaviour
 
     Vector2 mousePosition;
     Vector2 previousMousePosition;
-    
+
     Vector2Int resolution;
     Vector3Int threadGroupAmount;
 
@@ -49,7 +52,7 @@ public class LBM_GPU : MonoBehaviour
     {
         planeWidth = GetComponent<PlaneGenerator>().widthInput;
         planeHeight = GetComponent<PlaneGenerator>().heightInput;
-        
+
         mousePosition = Input.mousePosition;
         previousMousePosition = mousePosition;
 
@@ -63,72 +66,36 @@ public class LBM_GPU : MonoBehaviour
         threadGroupAmount = new Vector3Int(planeWidth, planeHeight, 1);
 
         LBMShader.GetKernelThreadGroupSizes(collisionKernel, out uint xThreadGroupSize, out uint yThreadGroupSize, out uint zThreadGroupSize);
-        threadGroupAmount = new Vector3Int(Mathf.CeilToInt(resolution.x / (float)xThreadGroupSize),  Mathf.CeilToInt(resolution.y / (float)yThreadGroupSize), Mathf.CeilToInt(1 / (float)zThreadGroupSize));
+        threadGroupAmount = new Vector3Int(Mathf.CeilToInt(resolution.x / (float)xThreadGroupSize), Mathf.CeilToInt(resolution.y / (float)yThreadGroupSize), Mathf.CeilToInt(1 / (float)zThreadGroupSize));
 
         LBMShader.SetInt("width", planeWidth);
         LBMShader.SetInt("height", planeHeight);
         LBMShader.SetFloat("tau", tau);
         LBMShader.SetFloat("dt", dt);
 
-        fTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.RFloat)
-        {
-            dimension = UnityEngine.Rendering.TextureDimension.Tex3D,
-            volumeDepth = 9,
-            enableRandomWrite = true
-        };
-        fTexture.Create();
+        densityTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.ARGBFloat);
+        densityTexture.enableRandomWrite = true;
+        densityTexture.Create();
 
-        fnewTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.RFloat)
-        {
-            dimension = UnityEngine.Rendering.TextureDimension.Tex3D,
-            volumeDepth = 9,
-            enableRandomWrite = true
-        };
-        fnewTexture.Create();
+        densityPrevTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.ARGBFloat);
+        densityPrevTexture.enableRandomWrite = true;
+        densityPrevTexture.Create();
 
-        feqTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.RFloat)
-        {
-            dimension = UnityEngine.Rendering.TextureDimension.Tex3D,
-            volumeDepth = 9,
-            enableRandomWrite = true
-        };
-        feqTexture.Create();
-
-        rhoTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.RFloat)
-        {
-            enableRandomWrite = true
-        };
-        rhoTexture.Create();
-
-        inRhoTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.RFloat)
-        {
-            enableRandomWrite = true
-        };
-        inRhoTexture.Create();
-
-        velTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.RGFloat)
-        {
-            enableRandomWrite = true
-        };
-        velTexture.Create();
-
-        tempVelTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.RGFloat)
-        {
-            enableRandomWrite = true
-        };
-        tempVelTexture.Create();
+        tempTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.ARGBFloat);
+        tempTexture.enableRandomWrite = true;
+        tempTexture.Create();
 
 
         latticeTemp = new Texture2D(9, 3, TextureFormat.RFloat, false);
         latticeTemp.SetPixelData(lattice, 0);
         latticeTemp.Apply();
-        latticeTexture = new RenderTexture(9, 3, 0, RenderTextureFormat.RFloat){enableRandomWrite = true};
+        latticeTexture = new RenderTexture(9, 3, 0, RenderTextureFormat.RFloat) { enableRandomWrite = true };
         Graphics.Blit(latticeTemp, latticeTexture);
         latticeTexture.Create();
-        
+
         LBMShader.SetTexture(addValueKernel, "inRhoTexture", inRhoTexture);
         LBMShader.SetTexture(addVelocityKernel, "tempVelTexture", tempVelTexture);
-        
+
         LBMShader.SetTexture(densityKernel, "fTexture", fTexture);
         LBMShader.SetTexture(densityKernel, "latticeTexture", latticeTexture);
         LBMShader.SetTexture(densityKernel, "velTexture", velTexture);
@@ -136,7 +103,7 @@ public class LBM_GPU : MonoBehaviour
         LBMShader.SetTexture(densityKernel, "rhoTexture", rhoTexture);
         LBMShader.SetTexture(densityKernel, "inRhoTexture", inRhoTexture);
 
-        
+
         LBMShader.SetTexture(collisionKernel, "fTexture", fTexture);
         LBMShader.SetTexture(collisionKernel, "fnewTexture", fnewTexture);
         LBMShader.SetTexture(collisionKernel, "feqTexture", feqTexture);
@@ -144,7 +111,7 @@ public class LBM_GPU : MonoBehaviour
         LBMShader.SetTexture(collisionKernel, "velTexture", velTexture);
         LBMShader.SetTexture(collisionKernel, "latticeTexture", latticeTexture);
 
-        
+
         LBMShader.SetTexture(streamingKernel, "fTexture", fTexture);
         LBMShader.SetTexture(streamingKernel, "fnewTexture", fnewTexture);
         LBMShader.SetTexture(streamingKernel, "latticeTexture", latticeTexture);
@@ -166,14 +133,15 @@ public class LBM_GPU : MonoBehaviour
 
 
         //update the vertices based on the density texture
-        Renderer rend = GetComponent<Renderer> ();
+        Renderer rend = GetComponent<Renderer>();
         rend.material = new Material(updateVerticesShader);
         rend.material.SetTexture("importTexture", rhoTexture);
         //rend.material.mainTexture = densityTexture;
     }
 
-    void ChangeTexture(){
-        
+    void ChangeTexture()
+    {
+
         mousePosition = Input.mousePosition;
 
         Mesh mesh = GetComponent<MeshFilter>().mesh;
@@ -194,14 +162,14 @@ public class LBM_GPU : MonoBehaviour
                     int vertexHit = GetClosestVertex(hit, triangles);
                     int x = vertexHit % planeWidth;
                     int y = vertexHit / planeWidth;
-                    
+
                     LBMShader.SetFloat("hitPosX", x);
                     LBMShader.SetFloat("hitPosY", y);
 
-                    
+
                     LBMShader.Dispatch(addValueKernel, 1, 1, 1);
                 }
-                
+
             }
         }
         if (Input.GetKeyDown(KeyCode.M))//(Input.GetMouseButton(1))
@@ -211,7 +179,7 @@ public class LBM_GPU : MonoBehaviour
                 float xPos = hit.point.x;
                 float yPos = hit.point.y;
                 MeshCollider meshCollider = hit.collider as MeshCollider;
-                
+
                 if (meshCollider != null && meshCollider.sharedMesh != null)
                 {
                     int vertexHit = GetClosestVertex(hit, triangles);

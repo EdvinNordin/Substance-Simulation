@@ -264,8 +264,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 24dcb743686370049914f3c726799290, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  widthInput: 100
-  heightInput: 100
+  widthInput: 30
+  heightInput: 30
 --- !u!4 &425477480
 Transform:
   m_ObjectHideFlags: 0
@@ -345,11 +345,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   navierStokesShader: {fileID: 7200000, guid: e3b6faf16cbda284e911d064f7914cab, type: 3}
   updateVerticesShader: {fileID: 4800000, guid: 65b97dfb836070d4682bfc74aaf2a8b8, type: 3}
-  value: 10
-  velocity: 1000
-  diffusion: 0.001
+  value: 1
+  velocity: 1
+  diffusion: 0.0001
   viscosity: 0.0001
-  deltaTime: 0.01
+  deltaTime: 0.1
 --- !u!114 &425477491
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -393,7 +393,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   nx: 30
   ny: 30
-  updateVerticesShader: {fileID: 0}
+  updateVerticesShader: {fileID: 4800000, guid: 65b97dfb836070d4682bfc74aaf2a8b8, type: 3}
   iter: 1
   dt: 0.1
   visc: 0.1
@@ -569,7 +569,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 60
+  field of view: 33.46678
   orthographic: 0
   orthographic size: 5
   m_Depth: -1

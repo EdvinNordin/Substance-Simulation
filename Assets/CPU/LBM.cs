@@ -145,22 +145,6 @@ public class LBM : MonoBehaviour
         {
             for (int j = 0; j < ny; j++)
             {
-                /*for (int k = 0; k < q; k++)
-                {
-                    int nextX = i + latticeDirX[k];
-                    int nextY = j + latticeDirY[k];
-
-                    // If the next cell is inside the domain, move the particle to the next cell
-                    if(nextX >= 0 && nextX < nx && nextY >= 0 && nextY < ny)
-                    {
-                        f[nextX, nextY, k] = fnew[i, j, k];
-                    }
-                    // If the next cell is outside the domain, apply the outflow boundary condition
-                    else
-                    {
-                        f[i, j, k] = 0f;//fnew[i, j, k];
-                    }
-                }*/
                 
 
                 for (int k = 0; k < 9; ++k)

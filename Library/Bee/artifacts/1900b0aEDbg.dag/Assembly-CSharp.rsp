@@ -336,6 +336,7 @@
 "Assets/CPU/NoConShallowWater.cs"
 "Assets/GPU/LBM_GPU.cs"
 "Assets/GPU/NS_GPU.cs"
+"Assets/GPU/TEST.cs"
 "Assets/GPU/WEGPU.cs"
 "Assets/PlaneGenerator.cs"
 "Assets/Testing/StableFluids2D.cs"

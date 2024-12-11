@@ -1,0 +1,199 @@
+// FluidSimulation.compute
+
+#pragma kernel Diffusion
+#pragma kernel Advection
+#pragma kernel Projection1
+#pragma kernel Projection2
+#pragma kernel Projection3
+#pragma kernel SetBounds
+#pragma kernel TextureSet
+#pragma kernel AddValue
+#pragma kernel AddVelocity
+
+uint Width;
+uint Height;
+
+int indicator;
+int value;
+int velocity;
+
+float dt;
+float spread;
+float hitPosX;
+float hitPosY;
+float xAmount;
+float yAmount;
+
+/*RWTexture2D<float4> _In;  // Input Texture
+RWTexture2D<float4> _Out;  // Output Texture
+RWTexture2D<float4> _OutTemp;  // Velocity Texture*/
+Texture2D<float4> _In;  // Generic input buffer
+RWTexture2D<float4> _Out;  // Generic output buffer
+RWTexture2D<float> _Pressure;
+RWTexture2D<float> _Divergence;
+RWTexture2D<float2> _Velocity;
+RWTexture2D<float4> _DisplayTexture;
+
+[numthreads(8, 8, 1)]
+void Diffusion(uint2 id : SV_DispatchThreadID)
+{
+    int Width, Height;
+	_Out.GetDimensions(Width, Height);
+	int2 dim = int2(Width, Height);
+	if (any(id >= dim))
+	{
+		return;
+	}
+
+        float a = dt * spread * (Width - 2) * (Height - 2);
+	_Out[id] =
+		(_In[id] + 
+			a * (_Out[id + uint2(1, 0)] + 
+            _Out[id - uint2(1, 0)] + 
+            _Out[id + uint2(0, 1)] + 
+            _Out[id - uint2(0, 1)]
+		))  / (1 + 4 * a);
+}
+
+[numthreads(8, 8, 1)]
+void Advection(uint2 id : SV_DispatchThreadID)
+{
+	int Width, Height;
+	_Out.GetDimensions(Width, Height);
+	int2 dim = int2(Width, Height);
+	if (any(id >= dim))
+	{
+		return;
+	}
+
+	float2 dt0 = dt * (Width - 2);
+	float2 vec = float2(id) - dt0 * _Velocity[id];
+	vec = clamp(vec, 0.5, (Width - 2) + 0.5);
+
+	uint2 xy0 = (uint2) vec;
+	uint2 xy1 = xy0 + 1;
+
+	float2 st1 = vec - xy0;
+	float2 st0 = 1 - st1;
+
+	_Out[id] = 
+		st0.x * (st0.y * _In[xy0] +
+			     st1.y * _In[uint2(xy0.x, xy1.y)]) +
+		st1.x * (st0.y * _In[uint2(xy1.x, xy0.y)] +
+			     st1.y * _In[xy1]);
+}
+
+[numthreads(8, 8, 1)]
+void Projection1(int2 id : SV_DispatchThreadID) 
+{
+	int Width, Height;
+	_Pressure.GetDimensions(Width, Height);
+	int2 dim = int2(Width, Height);
+	if (any(id >= dim))
+	{
+		return;
+	}				
+        
+    _Pressure[id] = 0;
+    _Divergence[id] = -0.5f *
+    ((_Velocity[id + uint2(1, 0)].x - _Velocity[id - uint2(1, 0)].x) / Width +
+        (_Velocity[id + uint2(0, 1)].y - _Velocity[id - uint2(0, 1)].y) / Height);
+}
+
+[numthreads(8, 8, 1)]
+void Projection2(int2 id : SV_DispatchThreadID) 
+{int Width, Height;
+	_Pressure.GetDimensions(Width, Height);
+	int2 dim = int2(Width, Height);
+	if (any(id >= dim))
+	{
+		return;
+	}
+
+	_Pressure[id] =
+		(_Divergence[id] +
+			_Pressure[id + uint2(1, 0)] + 
+			_Pressure[id - uint2(1, 0)] + 
+			_Pressure[id + uint2(0, 1)] + 
+			_Pressure[id - uint2(0, 1)]
+		) / 4;
+}
+
+[numthreads(8, 8, 1)]
+void Projection3(int2 id : SV_DispatchThreadID) 
+{
+	int Width, Height;
+	_Velocity.GetDimensions(Width, Height);
+	int2 dim = int2(Width, Height);
+	if (any(id >= dim))
+	{
+		return;
+	}
+
+	_Velocity[id] -= 0.5 * float2(
+		(_Pressure[id + uint2(1, 0)] - _Pressure[id - uint2(1, 0)]) * Width,
+		(_Pressure[id + uint2(0, 1)] - _Pressure[id - uint2(0, 1)]) * Height
+	);
+}
+
+[numthreads(8, 8, 1)]
+void SetBounds(int2 id : SV_DispatchThreadID)
+{
+    if (id.x < Width && id.y == 0) // bottom boundary
+    {
+        if (_Out[int2(id.x, 0)].b < 0) // if velocity is downwards
+        {
+            _Out[int2(id.x, 0)] = float4(_Out[int2(id.x, 0)].rg, -_Out[int2(id.x, 0)].b, _Out[int2(id.x, 0)].a);
+        }
+    }
+    else if (id.x < Width && id.y == Height - 1) // top boundary
+    {
+        if (_Out[int2(id.x, Height - 1)].b > 0) // if velocity is upwards
+        {
+            _Out[int2(id.x, Height - 1)] = float4(_Out[int2(id.x, Height - 1)].rg, -_Out[int2(id.x, Height - 1)].b, _Out[int2(id.x, Height - 1)].a);
+        }
+    }
+
+    if (id.x == 0 && id.y < Height) // left boundary
+    {
+        if (_Out[int2(0, id.y)].g < 0) // if velocity is leftwards
+        {
+            _Out[int2(0, id.y)] = float4(_Out[int2(0, id.y)].r, -_Out[int2(0, id.y)].g, _Out[int2(0, id.y)].ba);
+        }
+    }
+    else if (id.x == Width - 1 && id.y < Height) // right boundary
+    {
+        if (_Out[int2(Width - 1, id.y)].g > 0) // if velocity is rightwards
+        {
+            _Out[int2(Width - 1, id.y)] = float4(_Out[int2(Width - 1, id.y)].r, -_Out[int2(Width - 1, id.y)].g, _Out[int2(Width - 1, id.y)].ba);
+        }
+    }
+}
+
+
+[numthreads(8, 8, 1)]
+void TextureSet(int2 id : SV_DispatchThreadID)
+{
+    /*
+    if (id.x == 50 && id.y == 50){
+        _Out[id] = float4(1000, 100, 0, _Out[id].a);
+    }*/
+}
+
+[numthreads(1, 1, 1)]
+void AddValue(int2 id : SV_DispatchThreadID)
+{
+	_Out[int2(hitPosX, hitPosY)] = float4(
+        _Out[int2(hitPosX, hitPosY)].r + value, 
+        _Out[int2(hitPosX, hitPosY)].gba);
+}
+
+[numthreads(1, 1, 1)]
+void AddVelocity(int2 id : SV_DispatchThreadID)
+{
+    _Out[int2(hitPosX, hitPosY)] = float4(
+        _Out[int2(hitPosX, hitPosY)].r, 
+        _Out[int2(hitPosX, hitPosY)].g + xAmount * velocity, 
+        _Out[int2(hitPosX, hitPosY)].b + yAmount * velocity, 
+        _Out[int2(hitPosX, hitPosY)].a);
+}

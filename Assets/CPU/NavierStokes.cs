@@ -36,7 +36,7 @@ public class NavierStokes : MonoBehaviour
     List<GameObject> pointObjects;
     public GameObject prefab;
     private RenderTexture densityTexture;
-    private Texture2D testTexture;
+    private Texture2D densityTexture2D;
 
     // Start is called before the first frame update
     void Start()
@@ -81,8 +81,8 @@ public class NavierStokes : MonoBehaviour
         {
             for (int j = 0; j < ny; j++)
             {
-                source[i, j] = 1f;
-                density[i, j] = 1f;//Random.value;
+                source[i, j] = 0f;
+                density[i, j] = 0f;//Random.value;
 
                 Vx[i, j] = 0.0f;
                 Vy[i, j] = 0.0f;
@@ -91,15 +91,15 @@ public class NavierStokes : MonoBehaviour
                 Vy0[i, j] = 0f;
             }
         }
-        testTexture = new Texture2D(nx, ny);
+        densityTexture2D = new Texture2D(nx, ny, TextureFormat.RFloat, false);
         densityTexture = new RenderTexture(nx, ny, 0, RenderTextureFormat.RFloat);
         densityTexture.enableRandomWrite = true;
         densityTexture.Create();
 
-        /*Renderer rend = GetComponent<Renderer>();
+        Renderer rend = GetComponent<Renderer>();
         rend.material = new Material(updateVerticesShader);
         //rend.material.mainTexture = densityTexture;
-        rend.material.SetTexture("importTexture", densityTexture);*/
+        rend.material.SetTexture("importTexture", densityTexture);
     }
 
 
@@ -107,6 +107,18 @@ public class NavierStokes : MonoBehaviour
 
     void Update()
     {
+        for (int i = 0; i < nx; i++)
+        {
+            for (int j = 0; j < ny; j++)
+            {
+                float value = density[i, j];
+                densityTexture2D.SetPixel(i, j, new Color(value, value, value, 1.0f));
+            }
+        }
+        densityTexture2D.Apply();
+
+        // Copy the Texture2D to the RenderTexture
+        Graphics.Blit(densityTexture2D, densityTexture);
         /*for (int i = 0; i < nx; i++)
 
         {
@@ -146,7 +158,7 @@ public class NavierStokes : MonoBehaviour
                     int vertexHit = GetClosestVertex(hit, triangles);
                     int a = vertexHit / nx;
                     int b = vertexHit % nx;
-                    density[a, b] += 3.0f;
+                    source[a, b] += 30.0f;
                 }
             }
         }

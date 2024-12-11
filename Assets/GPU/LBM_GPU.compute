@@ -93,8 +93,8 @@ void Collision(int2 id : SV_DispatchThreadID)
         float uu = velTexture[id].x * velTexture[id].x + velTexture[id].y * velTexture[id].y;
 
         //feqTexture[int3(id.x, id.y, k)] = latticeTexture[int2(k, 2)] * rhoTexture[id] * 1.0f * uu / cc + 0.5 * (uu / cc) * (uu / cc) + - vu / (2.0f * cc);
-        feqTexture[int3(id.x, id.y, k)] = latticeTexture[int2(k, 2)] * rhoTexture[id] * 1.0*(1.0f + 3.0f * (vu / cc) + (9.0f / 2.0f) * (vu / cc) * (vu / cc) - (3.0f / 2.0f) * (uu / cc))
-        ;//+ 0.001 * sin(((8.24f/500)*id.x + (8.24f/500)*id.y) - time);
+        feqTexture[int3(id.x, id.y, k)] = latticeTexture[int2(k, 2)] * rhoTexture[id] * 1.0*
+            (1.0f + 3.0f * (vu / cc) + (9.0f / 2.0f) * (vu / cc) * (vu / cc) - (3.0f / 2.0f) * (uu / cc));//+ 0.001 * sin(((8.24f/500)*id.x + (8.24f/500)*id.y) - time);
         fnewTexture[int3(id.x, id.y, k)] = fTexture[int3(id.x, id.y, k)] - (fTexture[int3(id.x, id.y, k)] - feqTexture[int3(id.x, id.y, k)]) * (dt / tau);
         //fnewTexture[int3(id.x, id.y, k)] = clamp(fnewTexture[int3(id.x, id.y, k)], 0.0f, 1.0f);
     }
