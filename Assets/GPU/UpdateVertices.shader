@@ -42,12 +42,16 @@ Shader "UpdateVertices"
             
             fixed4 frag (v2f i) : SV_Target
             {
-                float value = tex2D(importTexture, i.uv).r*10.0f;
-                float r = value * (sin(_Time.w + 0.0) * 0.05 + 0.5);
-                float g = value * (sin(_Time.w + 2.0) * 0.05 + 0.5);
-                float b = value * (sin(_Time.w + 4.0) * 0.05 + 0.5);
+                float intensifier = 1.0f;
+                float value = tex2D(importTexture, i.uv).r*intensifier;
+                
+                float r = value;//min(0,value * (sin(_Time.w + 0.0) * 0.05 + 0.5));
+                float g = value;//max(1,value * (sin(_Time.w + 2.0) * 0.05 + 0.5));
+                float b = value;//0;//value * (sin(_Time.w + 4.0) * 0.05 + 0.5);
                 float alpha = value;
-                fixed4 col = fixed4(1.0f-r, 1.0f-g, 1.0f-b, alpha);
+                //fixed4 col = fixed4(1.0f-r, 1.0f-g, 1.0f-b, alpha); //old
+                //fixed4 col = fixed4(0.5f+r,0.5f+g,0.5f+b,alpha); //for WE
+                fixed4 col = fixed4(0.0f+r,0.0f+g,0.0f+b,alpha); //for NS
                 return col;
             }
             ENDCG

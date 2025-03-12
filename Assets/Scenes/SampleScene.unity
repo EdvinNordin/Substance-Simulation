@@ -264,8 +264,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 24dcb743686370049914f3c726799290, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  widthInput: 30
-  heightInput: 30
+  widthInput: 100
+  heightInput: 100
 --- !u!4 &425477480
 Transform:
   m_ObjectHideFlags: 0
@@ -415,7 +415,7 @@ MonoBehaviour:
   computeShader: {fileID: 7200000, guid: f7dd06bf209cd384fa4cea4968c66872, type: 3}
   updateVerticesShader: {fileID: 4800000, guid: 65b97dfb836070d4682bfc74aaf2a8b8, type: 3}
   dt: 0.1
-  c: 1
+  c: 0.2
 --- !u!1 &705507993
 GameObject:
   m_ObjectHideFlags: 0

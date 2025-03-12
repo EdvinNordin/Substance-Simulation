@@ -19,17 +19,30 @@ float dt;
 
 [numthreads(10,10,1)]
 void WaveEquation (int2 id : SV_DispatchThreadID)
-{   
-    
-        accTexture[id] = c * c * (heightTexture[int2(id.x - 1, id.y)] + heightTexture[int2(id.x + 1, id.y)] + heightTexture[int2(id.x, id.y + 1)] + 
-                        heightTexture[int2(id.x, id.y - 1)] - 4.0f * heightTexture[id]);
-        velTexture[id] = velTexture[id] + dt * accTexture[id];
-        heightTexture[id] = heightTexture[id] + dt * velTexture[id];
-        
+{
+    float neighbourAmount = 4.0f;
+    float d = sqrt(2);
+    accTexture[id] = // a = u''_t = c^2(u''_x) = adjacents - 4*self
+        c * c * (
+            heightTexture[int2(id.x - 1, id.y)] +
+            heightTexture[int2(id.x + 1, id.y)] +
+            heightTexture[int2(id.x, id.y + 1)] + 
+            heightTexture[int2(id.x, id.y - 1)] +
+
+            /*heightTexture[int2(id.x - 1, id.y - 1)]/d +
+            heightTexture[int2(id.x + 1, id.y - 1)]/d +
+            heightTexture[int2(id.x - 1, id.y + 1)]/d + 
+            heightTexture[int2(id.x + 1, id.y + 1)]/d +*/
+            
+            - neighbourAmount * heightTexture[id]
+            );
+    velTexture[id] += dt * accTexture[id]; // v += a*dt
+    heightTexture[id] += dt * velTexture[id]; // u += v*dt
 }
 
 [numthreads(4, 4, 1)]
 void AddValue(int2 id : SV_DispatchThreadID)
 {
-	heightTexture[int2(hitPosX+id.x-2, hitPosY+id.y-2)] += 1.0f;
+	//heightTexture[int2(hitPosX+id.x-2, hitPosY+id.y-2)] += 1.0f; //mouse adjust
+    heightTexture[int2(hitPosX+id.x, hitPosY+id.y)] += 1.0f;
 }
