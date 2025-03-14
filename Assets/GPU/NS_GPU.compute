@@ -215,75 +215,7 @@ void Projection3(int2 id : SV_DispatchThreadID)
 	Result.b = _OutTemp[id].b - gradient.y;
 
     _Out[id] = Result;
-
-    /*_Temp[id] = float4(_Out[id].r, 
-                    _Out[id].g - 0.5f * (GetPrevState(int2(id.x+1, id.y), dim).g - GetPrevState(int2(id.x-1, id.y), dim).g) * (Scale),
-                    _Out[id].b - 0.5f * (GetPrevState(int2(id.x, id.y+1), dim).g - GetPrevState(int2(id.x, id.y-1), dim).g) * (Scale), 
-					_Out[id].z);*/
-}/*
-[numthreads(8, 8, 1)]
-void Projection1(int2 id : SV_DispatchThreadID) 
-{
-    if (id.x < 1 || id.x >= Width-1 || id.y < 1 || id.y >= Height-1) return;
-    float scale = 1.0f;
-	//In.g = pressure = 0
-    //In.b = divergence =>
-    float divergence = -0.5f * (
-        (_Out[int2(id.x+1, id.y)].g - _Out[int2(id.x-1, id.y)].g) *scale/2 +
-        (_Out[int2(id.x, id.y+1)].b - _Out[int2(id.x, id.y-1)].b) *scale/2
-    );
-    
-    _OutTemp[id] = float4(_In[id].r, 0, divergence, _In[id].a);
-
-    /*
-    _Temp[id] = float4(_In[id].r, 0, -0.5f *
-                ((_Out[int2(id.x+1, id.y)].g -
-                _Out[int2(id.x-1, id.y)].g)/Width +
-                (_Out[int2(id.x, id.y+1)].b -
-                _Out[int2(id.x, id.y-1)].b)/Height),
-                _In[id].a);*//*
 }
-
-[numthreads(8, 8, 1)]
-void Projection2(int2 id : SV_DispatchThreadID) 
-{
-    if (id.x < 1 || id.x >= Width-1 || id.y < 1 || id.y >= Height-1) return;
-    float pressure = (_In[id].b + (
-        _In[int2(id.x+1, id.y)].g + _In[int2(id.x-1, id.y)].g + 
-        _In[int2(id.x, id.y+1)].g + _In[int2(id.x, id.y-1)].g
-    )) * 0.25f;
-    
-    __OutTemp[id] = float4(_In[id].r, pressure, _In[id].b, _In[id].a);
-
-    /*_Temp[id] = float4(_In[id].r,
-                (_In[id].g + (_In[int2(id.x+1, id.y)].g + _In[int2(id.x-1, id.y)].g + 
-                _In[int2(id.x, id.y+1)].g + _In[int2(id.x, id.y-1)].g)) / 4 , _In[id].ba);
-                *//*
-}
-
-[numthreads(8, 8, 1)]
-void Projection3(int2 id : SV_DispatchThreadID) 
-{
-    if (id.x < 1 || id.x >= Width-1 || id.y < 1 || id.y >= Height-1) return;
-
-    float2 gradient = float2(
-        _In[int2(id.x+1, id.y)].g - _In[int2(id.x-1, id.y)].g,
-        _In[int2(id.x, id.y+1)].g - _In[int2(id.x, id.y-1)].g
-    ) * 0.5f;
-    
-    _OutTemp[id] = float4(
-        _Out[id].r,
-        _Out[id].g - gradient.x,
-        _Out[id].b - gradient.y,
-        _Out[id].a
-    );
-
-    /*
-    _Temp[id] = float4(_Out[id].r, 
-                    _Out[id].g - 0.5f * (_In[int2(id.x+1, id.y)].g - _In[int2(id.x-1, id.y)].g) * (Width),
-                    _Out[id].b - 0.5f * (_In[int2(id.x, id.y+1)].g - _In[int2(id.x, id.y-1)].g) * (Height), 
-					_Out[id].z);*/
-//}
 
 [numthreads(8, 8, 1)]
 void SetBounds(int2 id : SV_DispatchThreadID)
@@ -318,7 +250,6 @@ void SetBounds(int2 id : SV_DispatchThreadID)
         }
     }
 }
-
 
 [numthreads(8, 8, 1)]
 void TextureSet(int2 id : SV_DispatchThreadID)
@@ -356,9 +287,57 @@ void AddValue(int2 id : SV_DispatchThreadID)
 [numthreads(1, 1, 1)]
 void AddVelocity(int2 id : SV_DispatchThreadID)
 {
-    _Out[int2(hitPosX, hitPosY)] = float4(
-        _Out[int2(hitPosX, hitPosY)].r, 
-        _Out[int2(hitPosX, hitPosY)].g + xAmount * velocity, 
-        _Out[int2(hitPosX, hitPosY)].b + yAmount * velocity, 
-        _Out[int2(hitPosX, hitPosY)].a);
+	float u = 0;//value + value * sqrt( xAmount*xAmount + yAmount*yAmount ); //density aka concentration
+	float vx = xAmount * velocity;
+	float vy = yAmount * velocity;
+
+	//3x3 grid
+	int2 p0 = int2(hitPosX, hitPosY);
+	int2 p1 = int2(hitPosX+1, hitPosY);
+	int2 p2 = int2(hitPosX-1, hitPosY);
+	int2 p3 = int2(hitPosX, hitPosY+1);
+	int2 p4 = int2(hitPosX, hitPosY-1);
+	int2 p5 = int2(hitPosX+1, hitPosY+1);
+	int2 p6 = int2(hitPosX-1, hitPosY+1);
+	int2 p7 = int2(hitPosX+1, hitPosY-1);
+	int2 p8 = int2(hitPosX-1, hitPosY-1);
+
+	//circle outside 3x3 grid
+	int2 q0 = int2(hitPosX+2, hitPosY+1);
+	int2 q1 = int2(hitPosX+2, hitPosY);
+	int2 q2 = int2(hitPosX+2, hitPosY-1);
+	int2 q3 = int2(hitPosX-2, hitPosY+1);
+	int2 q4 = int2(hitPosX-2, hitPosY);
+	int2 q5 = int2(hitPosX-2, hitPosY-1);
+	int2 q6 = int2(hitPosX+1, hitPosY+2);
+	int2 q7 = int2(hitPosX, hitPosY+2);
+	int2 q8 = int2(hitPosX-1, hitPosY+2);
+	int2 q9 = int2(hitPosX+1, hitPosY-2);
+	int2 qX = int2(hitPosX, hitPosY-2);
+	int2 qE = int2(hitPosX-1, hitPosY-2);
+	
+	_Out[p0] = float4(_Out[p0].r+u, _Out[p0].g+vx, _Out[p0].b+vy, _Out[p0].a);
+	_Out[p1] = float4(_Out[p1].r+u, _Out[p1].g+vx, _Out[p1].b+vy, _Out[p1].a);
+	_Out[p2] = float4(_Out[p2].r+u, _Out[p2].g+vx, _Out[p2].b+vy, _Out[p2].a);
+	_Out[p3] = float4(_Out[p3].r+u, _Out[p3].g+vx, _Out[p3].b+vy, _Out[p3].a);
+	_Out[p4] = float4(_Out[p4].r+u, _Out[p4].g+vx, _Out[p4].b+vy, _Out[p4].a);
+	_Out[p5] = float4(_Out[p5].r+u, _Out[p5].g+vx, _Out[p5].b+vy, _Out[p5].a);
+	_Out[p6] = float4(_Out[p6].r+u, _Out[p6].g+vx, _Out[p6].b+vy, _Out[p6].a);
+	_Out[p7] = float4(_Out[p7].r+u, _Out[p7].g+vx, _Out[p7].b+vy, _Out[p7].a);
+	_Out[p8] = float4(_Out[p8].r+u, _Out[p8].g+vx, _Out[p8].b+vy, _Out[p8].a);
+
+	_Out[q0] = float4(_Out[q0].r+u, _Out[q0].g+vx, _Out[q0].b+vy, _Out[q0].a);
+	_Out[q1] = float4(_Out[q1].r+u, _Out[q1].g+vx, _Out[q1].b+vy, _Out[q1].a);
+	_Out[q2] = float4(_Out[q2].r+u, _Out[q2].g+vx, _Out[q2].b+vy, _Out[q2].a);
+	_Out[q3] = float4(_Out[q3].r+u, _Out[q3].g+vx, _Out[q3].b+vy, _Out[q3].a);
+	_Out[q4] = float4(_Out[q4].r+u, _Out[q4].g+vx, _Out[q4].b+vy, _Out[q4].a);
+	_Out[q5] = float4(_Out[q5].r+u, _Out[q5].g+vx, _Out[q5].b+vy, _Out[q5].a);
+	_Out[q6] = float4(_Out[q6].r+u, _Out[q6].g+vx, _Out[q6].b+vy, _Out[q6].a);
+	_Out[q7] = float4(_Out[q7].r+u, _Out[q7].g+vx, _Out[q7].b+vy, _Out[q7].a);
+	_Out[q8] = float4(_Out[q8].r+u, _Out[q8].g+vx, _Out[q8].b+vy, _Out[q8].a);
+	_Out[q9] = float4(_Out[q9].r+u, _Out[q9].g+vx, _Out[q9].b+vy, _Out[q9].a);
+	_Out[qX] = float4(_Out[qX].r+u, _Out[qX].g+vx, _Out[qX].b+vy, _Out[qX].a);
+	_Out[qE] = float4(_Out[qE].r+u, _Out[qE].g+vx, _Out[qE].b+vy, _Out[qE].a);
+	
+	
 }

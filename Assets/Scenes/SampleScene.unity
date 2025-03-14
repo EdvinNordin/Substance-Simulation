@@ -345,10 +345,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   navierStokesShader: {fileID: 7200000, guid: e3b6faf16cbda284e911d064f7914cab, type: 3}
   updateVerticesShader: {fileID: 4800000, guid: 65b97dfb836070d4682bfc74aaf2a8b8, type: 3}
-  value: 1
-  velocity: 1
+  value: 10
+  velocity: 10
   diffusion: 0.0001
-  viscosity: 0.0001
+  viscosity: 1
   deltaTime: 0.1
 --- !u!114 &425477491
 MonoBehaviour:
@@ -362,7 +362,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 38bd92f420112e149b5e65a2b325e0f8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  LBMShader: {fileID: 7200000, guid: 2bf4c46588664764b843ea71c5cab22e, type: 3}
+  LBMShader: {fileID: 7200000, guid: af0e05539723dce4ebb14b5dca4ea0e4, type: 3}
   updateVerticesShader: {fileID: 4800000, guid: 65b97dfb836070d4682bfc74aaf2a8b8, type: 3}
   tau: 1
   dt: 1
@@ -415,7 +415,7 @@ MonoBehaviour:
   computeShader: {fileID: 7200000, guid: f7dd06bf209cd384fa4cea4968c66872, type: 3}
   updateVerticesShader: {fileID: 4800000, guid: 65b97dfb836070d4682bfc74aaf2a8b8, type: 3}
   dt: 0.1
-  c: 0.2
+  c: 1
 --- !u!1 &705507993
 GameObject:
   m_ObjectHideFlags: 0

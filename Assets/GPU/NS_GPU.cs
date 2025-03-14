@@ -39,7 +39,7 @@ public class NS_GPU : MonoBehaviour
     int yThreadGroups;
 
 
-    public float value = 10;
+    public float value = 100;
     public float velocity = 10;
     public float diffusion = 0.001f;
     public float viscosity = 0.001f;
@@ -163,99 +163,6 @@ public class NS_GPU : MonoBehaviour
         navierStokesShader.Dispatch(kernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
 
     }
-
-    void Projection(RenderTexture outTexture, RenderTexture inTexture)
-    {
-        /*// Projection Part 1
-        navierStokesShader.SetTexture(projection1Kernel, "_OutTemp", outTexture);
-        navierStokesShader.SetTexture(projection1Kernel, "_In", inTexture);
-        navierStokesShader.SetTexture(projection1Kernel, "_Out", tempTexture);
-        navierStokesShader.Dispatch(projection1Kernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
-
-        //SetBounds(prevStateTexture);
-
-        // Projection Pt2
-        for (int k = 0; k < 1; k++)
-        {
-            navierStokesShader.SetTexture(projection2Kernel, "_In", inTexture);
-            navierStokesShader.SetTexture(projection2Kernel, "_OutTemp", tempTexture);
-            navierStokesShader.Dispatch(projection2Kernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
-
-            Swap(ref tempTexture, ref inTexture);
-            //SetBounds(prevStateTexture);
-        }
-
-        // Projection Pt3
-        navierStokesShader.SetTexture(projection3Kernel, "_In", inTexture);
-        navierStokesShader.SetTexture(projection3Kernel, "_OutTemp", outTexture);
-        navierStokesShader.SetTexture(projection3Kernel, "_Out", tempTexture);
-        navierStokesShader.Dispatch(projection3Kernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
-
-        Swap(ref tempTexture, ref stateTexture);
-        //SetBounds(stateTexture);*/
-
-    }
-    /*
-        void Diffuse(RenderTexture inTexture, RenderTexture outTexture, float spread, int indicator, bool setBounds)
-        {
-            navierStokesShader.SetFloat("spread", spread);
-            navierStokesShader.SetInt("indicator", indicator);
-
-
-            navierStokesShader.SetTexture(diffusionKernel, "_In", outTexture);
-            navierStokesShader.SetTexture(diffusionKernel, "_Out", inTexture);
-            navierStokesShader.SetTexture(diffusionKernel, "_Temp", tempTexture);
-            navierStokesShader.Dispatch(diffusionKernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
-            Swap(ref tempTexture, ref outTexture);
-
-            navierStokesShader.SetTexture(diffusionKernel, "_In", inTexture);
-            navierStokesShader.SetTexture(diffusionKernel, "_Out", outTexture);
-            navierStokesShader.SetTexture(diffusionKernel, "_Temp", tempTexture);
-            navierStokesShader.Dispatch(diffusionKernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
-            Swap(ref tempTexture, ref outTexture);
-        }
-
-        void Advect(RenderTexture inTexture, RenderTexture outTexture, int indicator, bool setBounds = false)
-        {
-            navierStokesShader.SetInt("indicator", indicator);
-            navierStokesShader.SetTexture(advectionKernel, "_In", inTexture);
-            navierStokesShader.SetTexture(advectionKernel, "_Out", outTexture);
-            navierStokesShader.SetTexture(advectionKernel, "_Temp", tempTexture);
-            navierStokesShader.Dispatch(advectionKernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
-            //Swap(ref tempTexture, ref outTexture);
-        }
-
-        void Projection()
-        {
-            // Projection Part 1
-            navierStokesShader.SetTexture(projection1Kernel, "_In", prevStateTexture);
-            navierStokesShader.SetTexture(projection1Kernel, "_Out", stateTexture);
-            navierStokesShader.SetTexture(projection1Kernel, "_Temp", tempTexture);
-            navierStokesShader.Dispatch(projection1Kernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
-
-            Swap(ref tempTexture, ref prevStateTexture);
-            SetBounds(prevStateTexture);
-
-            // Projection Pt2
-            for (int k = 0; k < 1; k++)
-            {
-                navierStokesShader.SetTexture(projection2Kernel, "_In", prevStateTexture);
-                navierStokesShader.SetTexture(projection2Kernel, "_Temp", tempTexture);
-                navierStokesShader.Dispatch(projection2Kernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
-
-                Swap(ref tempTexture, ref prevStateTexture);
-                SetBounds(prevStateTexture);
-            }
-
-            // Projection Pt3
-            navierStokesShader.SetTexture(projection3Kernel, "_In", prevStateTexture);
-            navierStokesShader.SetTexture(projection3Kernel, "_Out", stateTexture);
-            navierStokesShader.SetTexture(projection3Kernel, "_Temp", tempTexture);
-            navierStokesShader.Dispatch(projection3Kernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
-
-            Swap(ref tempTexture, ref stateTexture);
-            SetBounds(stateTexture);
-        }*/
     Texture2D toTexture2D(RenderTexture rTex)
     {
         Texture2D tex = new Texture2D(planeWidth, planeHeight, TextureFormat.RGBAFloat, false);

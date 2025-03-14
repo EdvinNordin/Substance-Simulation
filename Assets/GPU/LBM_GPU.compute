@@ -142,7 +142,7 @@ void Streaming(int2 id : SV_DispatchThreadID)
 [numthreads(1, 1, 1)]
 void AddValue(int2 id : SV_DispatchThreadID)
 {
-	inRhoTexture[int2(hitPosX, hitPosY)] += 0.1f;
+	inRhoTexture[int2(hitPosX, hitPosY)] += 1.0f;//0.1f;
 }
 
 [numthreads(4, 4, 1)]

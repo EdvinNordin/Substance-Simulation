@@ -47,9 +47,15 @@ public class LBM_GPU : MonoBehaviour
     Vector2Int resolution;
     Vector3Int threadGroupAmount;
 
+    public LBM_GPU(RenderTexture fTexture)
+    {
+        this.fTexture = fTexture;
+    }
+
     // Start is called before the first frame update
     void Start()
     {
+        Debug.Log("xd");
         planeWidth = GetComponent<PlaneGenerator>().widthInput;
         planeHeight = GetComponent<PlaneGenerator>().heightInput;
 
@@ -71,7 +77,7 @@ public class LBM_GPU : MonoBehaviour
         LBMShader.SetInt("width", planeWidth);
         LBMShader.SetInt("height", planeHeight);
         LBMShader.SetFloat("tau", tau);
-        LBMShader.SetFloat("dt", dt);
+        LBMShader.SetFloat("dt", dt); //
 
         densityTexture = new RenderTexture(planeWidth, planeHeight, 0, RenderTextureFormat.ARGBFloat);
         densityTexture.enableRandomWrite = true;
@@ -87,7 +93,7 @@ public class LBM_GPU : MonoBehaviour
 
 
         latticeTemp = new Texture2D(9, 3, TextureFormat.RFloat, false);
-        latticeTemp.SetPixelData(lattice, 0);
+        latticeTemp.SetPixelData(lattice,0,0);
         latticeTemp.Apply();
         latticeTexture = new RenderTexture(9, 3, 0, RenderTextureFormat.RFloat) { enableRandomWrite = true };
         Graphics.Blit(latticeTemp, latticeTexture);
@@ -102,8 +108,7 @@ public class LBM_GPU : MonoBehaviour
         LBMShader.SetTexture(densityKernel, "tempVelTexture", tempVelTexture);
         LBMShader.SetTexture(densityKernel, "rhoTexture", rhoTexture);
         LBMShader.SetTexture(densityKernel, "inRhoTexture", inRhoTexture);
-
-
+        
         LBMShader.SetTexture(collisionKernel, "fTexture", fTexture);
         LBMShader.SetTexture(collisionKernel, "fnewTexture", fnewTexture);
         LBMShader.SetTexture(collisionKernel, "feqTexture", feqTexture);
@@ -121,16 +126,12 @@ public class LBM_GPU : MonoBehaviour
     void Update()
     {
         ChangeTexture();
-
         float time = Time.time;
         LBMShader.SetFloat("time", time);
 
         LBMShader.Dispatch(densityKernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
-
         LBMShader.Dispatch(collisionKernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
-
         LBMShader.Dispatch(streamingKernel, threadGroupAmount.x, threadGroupAmount.y, threadGroupAmount.z);
-
 
         //update the vertices based on the density texture
         Renderer rend = GetComponent<Renderer>();
